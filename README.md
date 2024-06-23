@@ -39,7 +39,7 @@ $ make example && ./example
 [0.00, 0.00, 0.00, 0.00, 0.00, -1.90, 16.65, 14.83, 7.35, -12.57, 0.00, -0.66, 4.08, 0.00, 0.00, 0.00, 0.00, 0.00, 1.00, 2.00, 3.00, 4.00, 5.00, 9.90, 10.97, 9.27, -1.97, 12.34, 15.59, 12.73, ]
 ```
 
-Produces write the same values to buffer `output` as the following Python code:
+Writes the same values to buffer `output` as the following Python code:
 
 ```python
 import jax.numpy as jnp
@@ -79,9 +79,10 @@ make benchmark
 ### `v1`
 
 `tensor_product_v1` Is a naive implementation that performs the entire tensor product for all Clebsch-Gordan coefficients:
-$$
+
+```math
 (u \otimes v)^{(l)}_m = \sum_{m_1 = -l_1}^{l_1}\sum_{m_2 = -l_2}^{l_2} C^{(l, m)}_{(l_1, m_1)(l_2, m_2)} u^{(l_1)}_{m_1}v^{(l_2)}_{m_2}
-$$
+```
 
 To minize overhead in the computation of the Clebsch-Gordan coefficients, they are pre-computed up to `L_MAX` and cached the first time the tensor product is called, creating a one-time startup cost.
 
