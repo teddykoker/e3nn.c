@@ -18,6 +18,7 @@ Jinja2==3.1.4
 jraph==0.0.6.dev0
 kiwisolver==1.4.5
 lovelyplots==1.0.2
+threadpoolctl
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 matplotlib==3.9.0
