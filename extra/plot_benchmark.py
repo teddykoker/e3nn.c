@@ -19,7 +19,7 @@ for line in lines:
         data[name]["lmax"].append(int(lmax)) 
         data[name]["time"].append(float(time) / trials * 1000) 
 
-fig = plt.figure(figsize=(5,3))
+fig = plt.figure(figsize=(6,3))
 for name in data.keys():
     plt.plot(data[name]["lmax"], data[name]["time"], label=name)
 plt.yscale("log")
@@ -31,8 +31,8 @@ plt.title("CPU Tensor Product Performance\n" + rf"({channels}x0e + {channels}x1o
 plt.savefig("extra/benchmark_versions.png", dpi=200, bbox_inches="tight", transparent=False)
 plt.close(fig)
 
-fig = plt.figure(figsize=(5,3))
-for name in ["e3nn.c v3", "e3nn-jax", "e3nn-torch", "e3nn-torch2"]:
+fig = plt.figure(figsize=(6,3))
+for name in ["e3nn.c v3", "e3nn-jax", "e3nn-torch", "e3nn-torch2", "e3nn-torch2-ipex"]:
     label = "e3nn.c" if "e3nn.c" in name else name
     plt.plot(data[name]["lmax"], data[name]["time"], label=label)
 plt.yscale("log")
