@@ -47,3 +47,4 @@ torch==2.3.1
 triton==2.3.1
 typing_extensions==4.12.2
 zipp==3.19.2
+LovelyPlots
