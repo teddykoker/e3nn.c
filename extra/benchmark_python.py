@@ -94,15 +94,15 @@ def run_e3nn_torch2_ipex(lmax):
         print(f"{lmax},", benchmark(tp, input1, input2))
 
 def main():
-    for lmax in range(1, L):
-        print("e3nn-jax")
-        run_e3nn_jax(lmax)
-        print("e3nn-torch")
-        run_e3nn_torch(lmax)
-        print("e3nn-torch2")
-        run_e3nn_torch2(lmax)
-        print("e3nn_torch2_ipex(")
-        run_e3nn_torch2_ipex(lmax)
- 
+    for run_fn, name in [
+        (run_e3nn_jax, "e3nn-jax"),
+        (run_e3nn_torch, "e3nn-torch"),
+        (run_e3nn_torch2, "e3nn-torch2"),
+        # (run_e3nn_torch2_ipex, "e3nn-torch2-ipex"),
+    ]:
+        print(name)
+        for lmax in range(1, L):
+            run_fn(lmax)
+
 if __name__ == "__main__":
     main()

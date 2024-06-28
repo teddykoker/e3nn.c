@@ -13,7 +13,7 @@ CFLAGS += -Wall -Wextra -Wpedantic \
 example: clebsch_gordan.o e3nn.o example.o tp.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
-benchmark_c.c: extra/benchmark_c_codegen.py
+benchmark_c.c: extra/benchmark_c_codegen.py extra/benchmark_python.py
 	python extra/benchmark_c_codegen.py > benchmark_c.c
 
 benchmark_c: clebsch_gordan.o e3nn.o benchmark_c.o tp.o
@@ -38,4 +38,4 @@ test:
 
 .PHONY: clean
 clean:
-	rm -f *.o *.so benchmark_c example
+	rm -f *.o *.so benchmark_c example benchmark_c.c
