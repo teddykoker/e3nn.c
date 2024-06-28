@@ -3,7 +3,7 @@ attrs==23.2.0
 chex==0.1.86
 contourpy==1.2.1
 cycler==0.12.1
-e3nn==0.5.1
+e3nn @ git+https://github.com/e3nn/e3nn@e203fa0f8f84fd4bd575f30b2fdb1cdd6f496d0b
 e3nn-jax==0.20.6
 etils==1.7.0
 filelock==3.15.2
@@ -11,11 +11,14 @@ flax==0.8.4
 fonttools==4.53.0
 fsspec==2024.6.0
 importlib_resources==6.4.0
+intel_extension_for_pytorch==2.3.100
 jax==0.4.29
 jaxlib==0.4.29
 Jinja2==3.1.4
 jraph==0.0.6.dev0
 kiwisolver==1.4.5
+lovelyplots==1.0.2
+threadpoolctl
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 matplotlib==3.9.0
@@ -26,6 +29,7 @@ msgpack==1.0.8
 nest-asyncio==1.6.0
 networkx==3.3
 numpy==2.0.0
+oneccl-bind-pt==2.3.0+cpu
 opt-einsum==3.3.0
 opt-einsum-fx==0.1.4
 optax==0.2.2
@@ -47,3 +51,4 @@ torch==2.3.1
 triton==2.3.1
 typing_extensions==4.12.2
 zipp==3.19.2
+--extra-index-url https://pytorch-extension.intel.com/release-whl/stable/cpu/us/
