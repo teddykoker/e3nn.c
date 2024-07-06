@@ -6,9 +6,6 @@
 #include <stdio.h>
 
 
-#define max(a,b) ((a) > (b) ? (a) : (b))
-#define min(a,b) ((a) < (b) ? (a) : (b))
-
 #define EPS 1e-8
 
 // cache for common factorials - makes initial cg computation a little faster
@@ -24,6 +21,20 @@ double fact_cache[10] = {
   5.04000000000000000000e+03,
   4.03200000000000000000e+04,
   3.62880000000000000000e+05,
+};
+
+#define MAX_DFACT_CACHE 9
+double dfact_cache[10] = {
+  1.00000000000000000000e+00,
+  1.00000000000000000000e+00,
+  2.00000000000000000000e+00,
+  3.00000000000000000000e+00,
+  8.00000000000000000000e+00,
+  1.50000000000000000000e+01,
+  4.80000000000000000000e+01,
+  1.05000000000000000000e+02,
+  3.84000000000000000000e+02,
+  9.45000000000000000000e+02,
 };
 
 
@@ -43,6 +54,15 @@ double factorial(int n) {
     return x * fact_cache[n];
 }
 
+double dfactorial(int n) {
+    if(n < MAX_DFACT_CACHE) { return dfact_cache[n]; }
+    double x = (double) n;
+    while((n -= 2) > MAX_FACT_CACHE) {
+        x *= (double) n;
+    }
+    return x * dfact_cache[n];
+}
+
 
 double _su2_cg(int j1, int j2, int j3, int m1, int m2, int m3) {
     // calculate the Clebsch-Gordon coefficient
@@ -51,8 +71,8 @@ double _su2_cg(int j1, int j2, int j3, int m1, int m2, int m3) {
     if (m3 != m1 + m2) {
         return 0;
     }
-    int vmin = max(max(-j1 + j2 + m3, -j1 + m1), 0);
-    int vmax = min(min(j2 + j3 + m1, j3 - j1 + j2), j3 + m3);
+    int vmin = MAX(MAX(-j1 + j2 + m3, -j1 + m1), 0);
+    int vmax = MIN(MIN(j2 + j3 + m1, j3 - j1 + j2), j3 + m3);
     
     double C = sqrt(
         (double) (2 * j3 + 1) *

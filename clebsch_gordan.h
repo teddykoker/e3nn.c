@@ -6,6 +6,9 @@
 // this will effect the startup time as the cache is built before main()
 #define L_MAX 14
 
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+
 typedef struct {
     int m1;
     int m2;
@@ -17,6 +20,13 @@ typedef struct {
    SparseClebschGordanElement* elements;
    int size; 
 } SparseClebschGordanMatrix;
+
+
+// returns n!
+double factorial(int n);
+
+// returns n!!
+double dfactorial(int n);
 
 // Clebsch-Gordan coefficients of the real irreducible representations of SO3
 // NOTE: build_clebsch_gordan_cache must be called first

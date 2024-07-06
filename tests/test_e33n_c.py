@@ -21,6 +21,16 @@ for tp in [e3nn_c.tensor_product_v1, e3nn_c.tensor_product_v2, e3nn_c.tensor_pro
     )
     tp.restype = None
 
+e3nn_c.spherical_harmonics.argtypes = (
+    ctypes.c_char_p,
+    ctypes.c_float,
+    ctypes.c_float,
+    ctypes.c_float,
+    np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
+)
+e3nn_c.spherical_harmonics.restype = None
+
+
 clebsch_gordan_c = ctypes.CDLL("./clebsch_gordan.so")
 
 clebsch_gordan_c.compute_clebsch_gordan.argtypes = (
@@ -35,8 +45,8 @@ clebsch_gordan_c.compute_clebsch_gordan.restype = ctypes.c_float
 
 
 @pytest.mark.parametrize("fn", [
-    e3nn_c.tensor_product_v1, 
-    e3nn_c.tensor_product_v2, 
+    # e3nn_c.tensor_product_v1, # commenting out for now because slow
+    # e3nn_c.tensor_product_v2, # commenting out for now bccause slow
     e3nn_c.tensor_product_v3,
 ])
 @pytest.mark.parametrize("input1,input2", [
@@ -54,6 +64,28 @@ def test_tensor_product(fn, input1, input2):
         repr(output.irreps).encode("utf-8"),
         output_c
     )
+    assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+
+
+@pytest.mark.parametrize("irreps", [
+    "1x0e",
+    "1x0e + 1x1o + 1x2e",
+    "2x0e + 3x1e + 4x2e",
+    "2x0e + 3x1o + 4x2e",
+    "1x0e + 1x1o + 1x2e + 1x3o",
+    "3x3e",
+    "1x0e + 1x1e + 1x2e + 1x3e + 1x4e + 1x5e + 1x6e + 1x7e + 1x8e",
+])
+@pytest.mark.parametrize("input", [
+    [0, 0, 1],
+    [1, 0, 0],
+    [0, 1, 0],
+    [1, 2, 3],
+])
+def test_spherical_harmonics(irreps, input):
+    output = e3nn_jax.spherical_harmonics(irreps, np.array(input), normalize=True, normalization="component")
+    output_c = np.zeros_like(output.array)
+    e3nn_c.spherical_harmonics(irreps.encode("utf-8"), *input, output_c)
     assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
 
 

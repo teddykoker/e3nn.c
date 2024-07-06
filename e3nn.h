@@ -31,4 +31,7 @@ void tensor_product_v2(const char* irrep_str1, const float* data1, const char* i
 // uses precomputed tensor products in tp.c
 void tensor_product_v3(const char* irrep_str1, const float* data1, const char* irrep_str2, const float* data2, const char* irrep_stro, float* datao);
 
+// Real spherical harmonics Y_lm(r) of vector (x, y, z) written to out
+void spherical_harmonics(const char* irrep_str, const float x, const float y, const float z, float* out);
+
 #endif // ifndef INCLUDED_E3NN_H

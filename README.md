@@ -17,18 +17,26 @@ Currently the only operation implemented is the tensor product, which tends to b
 #include "e3nn.h"
 
 int main(void){
+
+    // tensor product
+
     float input1[] = { 0, 1, 2, 3, 4 };
     float input2[] = { 0, 1, 2, 3, 4, 5};
-    float output[30] = { 0 };
+    float product[30] = { 0 };
 
     tensor_product("2x0e + 1x1o", input1, 
                    "1x0o + 1x2o", input2, 
-                   "2x0o + 2x1e + 1x2e + 2x2o + 1x3e", output);
+                   "2x0o + 2x1e + 1x2e + 2x2o + 1x3e", product);
 
-    printf("["); for (int i = 0; i < 30; i++){
-        printf("%.2f, ", output[i]);
-    }
-    printf("]\n");
+    printf("product ["); for (int i = 0; i < 30; i++){ printf("%.2f, ", product[i]); } printf("]\n");
+
+    // spherical harmonics
+
+    float sph[9] = { 0 };
+
+    spherical_harmonics("1x0e + 1x1o + 1x2e", 1.0, 2.0, 3.0, sph);
+
+    printf("sph ["); for (int i = 0; i < 9; i++) { printf("%.2f, ", sph[i]); } printf("]\n");
     
     return 0;
 }
@@ -36,7 +44,8 @@ int main(void){
 
 ```shell
 $ make example && ./example
-[0.00, 0.00, 0.00, 0.00, 0.00, -1.90, 16.65, 14.83, 7.35, -12.57, 0.00, -0.66, 4.08, 0.00, 0.00, 0.00, 0.00, 0.00, 1.00, 2.00, 3.00, 4.00, 5.00, 9.90, 10.97, 9.27, -1.97, 12.34, 15.59, 12.73, ]
+product [0.00, 0.00, 0.00, 0.00, 0.00, -1.90, 16.65, 14.83, 7.35, -12.57, 0.00, -0.66, 4.08, 0.00, 0.00, 0.00, 0.00, 0.00, 1.00, 2.00, 3.00, 4.00, 5.00, 9.90, 10.97, 9.27, -1.97, 12.34, 15.59, 12.73, ]
+sph [1.00, 0.46, 0.93, 1.39, 0.83, 0.55, -0.16, 1.66, 1.11, ]
 ```
 
 Writes the same values to buffer `output` as the following Python code:
@@ -47,8 +56,11 @@ import e3nn_jax as e3nn
 
 input1 = e3nn.IrrepsArray("2x0e + 1x1o", jnp.arange(5))
 input2 = e3nn.IrrepsArray("1x0o + 1x2o", jnp.arange(6))
-output = e3nn.tensor_product(input1, input2)
-print(output.array)
+product = e3nn.tensor_product(input1, input2)
+print("product", product.array)
+
+sph = e3nn.spherical_harmonics("1x0e + 1x1o + 1x2e", jnp.array([1, 2, 3]), normalize=True, normalization="component")
+print("sph", sph.array)
 ```
 
 ## Usage
@@ -98,10 +110,11 @@ The `tensor_product_v2` implementation leverages the fact that, even after conve
 
  - [X] Benchmark against `e3nn` and `e3nn-jax`
  - [X] Sparse Clebsch-Gordan implementation
- - [ ] Implement `filter_ir_out` and `irrep_normalization="norm"`
+ - [X] Implement Spherical Harmonics
  - [ ] Implement Linear/Self-interaction operation
- - [ ] Implement Spherical Harmonics
+ - [ ] Implement `filter_ir_out` and `irrep_normalization="norm"` for tensor product
  - [ ] Full [Nequip](https://arxiv.org/abs/2101.03164), [Allegro](https://arxiv.org/abs/2204.05249), or [ChargE3Net](https://arxiv.org/abs/2312.05388) implementation
+ - [ ] Implement `integral`, `norm` and no normalization for spherical harmonics
  - [ ] ...
 
 ## See also
