@@ -114,7 +114,7 @@ The `tensor_product_v2` implementation leverages the fact that, even after conve
  - [ ] Implement Linear/Self-interaction operation
  - [ ] Implement `filter_ir_out` and `irrep_normalization="norm"` for tensor product
  - [ ] Full [Nequip](https://arxiv.org/abs/2101.03164), [Allegro](https://arxiv.org/abs/2204.05249), or [ChargE3Net](https://arxiv.org/abs/2312.05388) implementation
- - [ ] Implement `integral`, `norm` and no normalization for spherical harmonics
+ - [ ] Implement `integral`, `norm`, and no normalization for spherical harmonics
  - [ ] ...
 
 ## See also
@@ -122,3 +122,5 @@ The `tensor_product_v2` implementation leverages the fact that, even after conve
  * [`e3nn` PyTorch]()
  * [`e3nn-jax`](https://github.com/e3nn/e3nn-jax)
  * The `e3nn` paper: https://arxiv.org/abs/2207.09453
+ * *Numerical Recipes in C, 2nd Edition* ([Press et al.](http://s3.amazonaws.com/nrbook.com/book_C210.html)) - helpful formulae and reference implementations for Legendre polynomials, Bessel functions
+ * [karpathy/llama.c](https://github.com/karpathy/llama2.c) - inspo for work
