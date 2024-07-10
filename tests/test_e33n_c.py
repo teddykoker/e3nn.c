@@ -30,6 +30,15 @@ e3nn_c.spherical_harmonics.argtypes = (
 )
 e3nn_c.spherical_harmonics.restype = None
 
+e3nn_c.linear.argtypes = (
+    ctypes.c_char_p,
+    np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
+    np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
+    ctypes.c_char_p,
+    np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
+)
+e3nn_c.linear.restype = None
+
 
 clebsch_gordan_c = ctypes.CDLL("./clebsch_gordan.so")
 
@@ -45,8 +54,8 @@ clebsch_gordan_c.compute_clebsch_gordan.restype = ctypes.c_float
 
 
 @pytest.mark.parametrize("fn", [
-    # e3nn_c.tensor_product_v1, # commenting out for now because slow
-    # e3nn_c.tensor_product_v2, # commenting out for now bccause slow
+    # e3nn_c.tensor_product_v1, # commenting out for now bc slow
+    # e3nn_c.tensor_product_v2, # commenting out for now bc slow
     e3nn_c.tensor_product_v3,
 ])
 @pytest.mark.parametrize("input1,input2", [
@@ -86,6 +95,27 @@ def test_spherical_harmonics(irreps, input):
     output = e3nn_jax.spherical_harmonics(irreps, np.array(input), normalize=True, normalization="component")
     output_c = np.zeros_like(output.array)
     e3nn_c.spherical_harmonics(irreps.encode("utf-8"), *input, output_c)
+    assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+
+
+@pytest.mark.parametrize("irreps_in,irreps_out", [
+    ("2x0e + 2x1o", "3x0e + 3x1o"),
+    ("1x0e + 2x1o", "3x0e + 3x1o"),
+    ("1x0e + 2x1o", "3x0e + 3x1o + 1x2e"),
+    ("1x0e + 2x1o + 1x2e", "3x0e + 3x1o"),
+])
+def test_linear(irreps_in, irreps_out):
+    input = e3nn_jax.normal(irreps_in, jax.random.PRNGKey(0))
+    linear = e3nn_jax.flax.Linear(
+        irreps_in=irreps_in,
+        irreps_out=irreps_out,
+    )
+    weight = linear.init(jax.random.PRNGKey(0), input)
+    output = linear.apply(weight, input)
+    
+    weight_c = np.concatenate([w.ravel() for w in weight["params"].values()])
+    output_c = np.zeros_like(output.array)
+    e3nn_c.linear(irreps_in.encode("utf-8"), np.array(input.array), weight_c, irreps_out.encode("utf-8"), output_c)
     assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
 
 

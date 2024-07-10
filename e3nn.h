@@ -34,4 +34,9 @@ void tensor_product_v3(const char* irrep_str1, const float* data1, const char* i
 // Real spherical harmonics Y_lm(r) of vector (x, y, z) written to out
 void spherical_harmonics(const char* irrep_str, const float x, const float y, const float z, float* out);
 
+// Linear or self-interaction operation
+// it is assumed that weights are raveled into a single float*, stored in the order they appear in irreps_in
+// does not support unsimplified irreps
+void linear(const char* irreps_in, const float* input, const float* weight, const char* irreps_out, float* out);
+
 #endif // ifndef INCLUDED_E3NN_H
