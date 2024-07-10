@@ -81,7 +81,7 @@ w = {"params": {
     "w[0,0] 2x0e,3x0e": jnp.arange(6, dtype=jnp.float32).reshape(2, 3),
     "w[1,1] 2x1o,3x1o": jnp.arange(6, dtype=jnp.float32).reshape(2, 3),
 }}
-output = linear.apply(w, x)
+output = linear.apply(w, input3)
 print("output", output)
 ```
 
