@@ -141,7 +141,7 @@ The `tensor_product_v2` implementation leverages the fact that, even after conve
 
 ## See also
 
- * [`e3nn` PyTorch]()
+ * [`e3nn` PyTorch](https://github.com/e3nn/e3nn)
  * [`e3nn-jax`](https://github.com/e3nn/e3nn-jax)
  * The `e3nn` paper: https://arxiv.org/abs/2207.09453
  * *Numerical Recipes in C, 2nd Edition* ([Press et al.](http://s3.amazonaws.com/nrbook.com/book_C210.html)) - helpful formulae and reference implementations for Legendre polynomials, Bessel functions
