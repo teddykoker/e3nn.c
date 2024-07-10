@@ -339,3 +339,46 @@ void spherical_harmonics(const char* irrep_str, const float x, const float y, co
     free(irreps);
     free(P);
 }
+
+
+void linear(const char* irreps_str_in, const float* input, const float* weight, const char* irreps_str_out, float* out) {
+    int size_in, size_out;
+    Irrep* irreps_in = parse_irrep_str(irreps_str_in, &size_in); 
+    Irrep* irreps_out = parse_irrep_str(irreps_str_out, &size_out); 
+
+    int w_ptr = 0;
+    int in_ptr = 0;
+
+    for (int i_in = 0; i_in < size_in; i_in++) {
+        int out_ptr = 0;
+        for (int i_out = 0; i_out < size_out; i_out++) {
+            // find matching output irrep - could be done in separate loop if too costly
+            if (irreps_in[i_in].l == irreps_out[i_out].l && irreps_in[i_in].p == irreps_out[i_out].p) {
+                int l = irreps_in[i_in].l;
+                int dim = 2 * l + 1;
+                int in_c = irreps_in[i_in].c;
+                int out_c = irreps_out[i_out].c;
+                float norm = sqrt(1.0 / in_c);
+
+                for (int j = 0; j < in_c; j++) {
+                    for (int m = -l; m <= l; m++) {
+                        for (int i = 0; i < out_c; i++) {
+                            out[out_ptr + m + l + i * dim] += (
+                                input[in_ptr + m + l + j * dim]
+                                * weight[w_ptr + i + j * out_c]
+                                * norm
+                            );
+                        }
+                    }
+                }
+                // increment weight pointer to next matrix
+                w_ptr += in_c * out_c;
+                break;
+            }
+            out_ptr += (irreps_out[i_out].l * 2 + 1) * irreps_out[i_out].c;
+        }
+        in_ptr += (irreps_in[i_in].l * 2 + 1) * irreps_in[i_in].c;
+    }
+    free(irreps_in);
+    free(irreps_out);
+}
