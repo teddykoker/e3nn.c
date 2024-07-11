@@ -10,21 +10,22 @@
 // index of spherical harmonic (l, m) in array
 #define SH_IDX(l, m) ((l) * (l) + (m) + (l))
 
-Irrep* parse_irrep_str(const char* str, int* size) {
+Irreps* irreps_create(const char* str) {
     // parse str into an array of Irrep with length size
-    *size = 1;
+    Irreps* irreps = (Irreps*) malloc(sizeof(Irreps));
+    irreps->size = 1;
     for (const char* p = str; *p; p++) {
         if (*p == '+') {
-            (*size)++;
+            irreps->size++;
         }
     }
-    Irrep* irreps = (Irrep*)malloc(*size * sizeof(Irrep));
+    irreps->irreps = (Irrep*) malloc(irreps->size * sizeof(Irrep));
 
     int c, l, index = 0;
     char p;
     const char* start = str;
     while (sscanf(start, "%dx%d%c", &c, &l, &p) == 3) {
-        irreps[index++] = (Irrep){ c, l, (p == 'e') ? EVEN : ODD };
+        irreps->irreps[index++] = (Irrep){ c, l, (p == 'e') ? EVEN : ODD };
         start = strchr(start, '+');
         if (!start) break;
         start++;
@@ -33,12 +34,22 @@ Irrep* parse_irrep_str(const char* str, int* size) {
 }
 
 
-void tensor_product_v1(const char* irrep_str1, float* data1, const char* irrep_str2, float* data2, const char* irrep_stro, float* datao) {
-    int size1, size2, sizeo;
-    Irrep* irreps1 = parse_irrep_str(irrep_str1, &size1);
-    Irrep* irreps2 = parse_irrep_str(irrep_str2, &size2);
-    Irrep* irrepso = parse_irrep_str(irrep_stro, &sizeo);
+void irreps_free(Irreps* irreps) {
+    free(irreps->irreps);
+    free(irreps);
+}
 
+
+int irreps_dim(const Irreps* irreps) {
+    int dim = 0;
+    for (int i = 0; i < irreps->size; i++) {
+        dim += 2 * irreps->irreps[i].l + 1;
+    }
+    return dim;
+}
+
+
+void tensor_product_v1(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, const Irreps* irreps_o, float* data_o) {
     build_clebsch_gordan_cache();
 
     // Lookup table where the start of each out irrep will be in datao
@@ -46,23 +57,23 @@ void tensor_product_v1(const char* irrep_str1, float* data1, const char* irrep_s
     // l*(p+1)/2
     int out_ptrs[(L_MAX + 1) * 2] = {0};
     int ptr = 0;
-    for (int i = 0; i < sizeo; i++) {
-        out_ptrs[irrepso[i].l + (irrepso[i].p + 1) / 2 * L_MAX] = ptr;
-        ptr += irrepso[i].c * (2 * irrepso[i].l + 1);
+    for (int i = 0; i < irreps_o->size; i++) {
+        out_ptrs[irreps_o->irreps[i].l + (irreps_o->irreps[i].p + 1) / 2 * L_MAX] = ptr;
+        ptr += irreps_o->irreps[i].c * (2 * irreps_o->irreps[i].l + 1);
     }
 
     int ptr1 = 0;
-    for (int i1 = 0; i1 < size1; i1++) {
-        int l1 = irreps1[i1].l;
-        int c1 = irreps1[i1].c;
-        int p1 = irreps1[i1].p;
+    for (int i1 = 0; i1 < irreps_1->size; i1++) {
+        int l1 = irreps_1->irreps[i1].l;
+        int c1 = irreps_1->irreps[i1].c;
+        int p1 = irreps_1->irreps[i1].p;
         int l1_dim = 2 * l1 + 1;
 
         int ptr2 = 0;
-        for (int i2 = 0; i2 < size2; i2++) {
-            int l2 = irreps2[i2].l;
-            int c2 = irreps2[i2].c;
-            int p2 = irreps2[i2].p;
+        for (int i2 = 0; i2 < irreps_2->size; i2++) {
+            int l2 = irreps_2->irreps[i2].l;
+            int c2 = irreps_2->irreps[i2].c;
+            int p2 = irreps_2->irreps[i2].p;
             int l2_dim = 2 * l2 + 1;
 
             int po = p1 * p2;
@@ -81,8 +92,8 @@ void tensor_product_v1(const char* irrep_str1, float* data1, const char* irrep_s
                                 int idx2 = ptr2 + c2_idx * l2_dim + m2 + l2;
                                 for (int mo = -lo; mo <= lo; mo++) {
                                     float cg = clebsch_gordan(l1, l2, lo, m1, m2, mo);
-                                    datao[out_ptr + mo + lo] += (
-                                        cg * data1[idx1] * data2[idx2] * normalize
+                                    data_o[out_ptr + mo + lo] += (
+                                        cg * data_1[idx1] * data_2[idx2] * normalize
                                     );
                                 } 
                             }
@@ -102,45 +113,37 @@ void tensor_product_v1(const char* irrep_str1, float* data1, const char* irrep_s
         }
         ptr1 += l1_dim * c1;
     }
-    free(irreps1);
-    free(irreps2);
-    free(irrepso);
 }
 
 
-void tensor_product_v2(const char* irrep_str1, const float* data1, const char* irrep_str2, const float* data2, const char* irrep_stro, float* datao) {
+void tensor_product_v2(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, const Irreps* irreps_o, float* data_o) {
     // this is the same as tensor_product above, except the inner loops over
     // m1, m2, mo are removed and replaced with lookups into the sparse
     // Clebsch-Gordan coefficients
-    int size1, size2, sizeo;
-    Irrep* irreps1 = parse_irrep_str(irrep_str1, &size1);
-    Irrep* irreps2 = parse_irrep_str(irrep_str2, &size2);
-    Irrep* irrepso = parse_irrep_str(irrep_stro, &sizeo);
-
     build_sparse_clebsch_gordan_cache();
 
-    // Lookup table where the start of each out irrep will be in datao
+     // Lookup table where the start of each out irrep will be in datao
     // only need to store one location per l/parity pair, it is cheap to hash by
     // l*(p+1)/2
     int out_ptrs[(L_MAX + 1) * 2] = {0};
     int ptr = 0;
-    for (int i = 0; i < sizeo; i++) {
-        out_ptrs[irrepso[i].l + (irrepso[i].p + 1) / 2 * L_MAX] = ptr;
-        ptr += irrepso[i].c * (2 * irrepso[i].l + 1);
+    for (int i = 0; i < irreps_o->size; i++) {
+        out_ptrs[irreps_o->irreps[i].l + (irreps_o->irreps[i].p + 1) / 2 * L_MAX] = ptr;
+        ptr += irreps_o->irreps[i].c * (2 * irreps_o->irreps[i].l + 1);
     }
 
     int ptr1 = 0;
-    for (int i1 = 0; i1 < size1; i1++) {
-        int l1 = irreps1[i1].l;
-        int c1 = irreps1[i1].c;
-        int p1 = irreps1[i1].p;
+    for (int i1 = 0; i1 < irreps_1->size; i1++) {
+        int l1 = irreps_1->irreps[i1].l;
+        int c1 = irreps_1->irreps[i1].c;
+        int p1 = irreps_1->irreps[i1].p;
         int l1_dim = 2 * l1 + 1;
 
         int ptr2 = 0;
-        for (int i2 = 0; i2 < size2; i2++) {
-            int l2 = irreps2[i2].l;
-            int c2 = irreps2[i2].c;
-            int p2 = irreps2[i2].p;
+        for (int i2 = 0; i2 < irreps_2->size; i2++) {
+            int l2 = irreps_2->irreps[i2].l;
+            int c2 = irreps_2->irreps[i2].c;
+            int p2 = irreps_2->irreps[i2].p;
             int l2_dim = 2 * l2 + 1;
 
             int po = p1 * p2;
@@ -157,10 +160,10 @@ void tensor_product_v2(const char* irrep_str1, const float* data1, const char* i
                     for (int c2_idx = 0; c2_idx < c2; c2_idx++) {
                         int idx2 = ptr2 + c2_idx * l2_dim;
                         for (int e=0; e<cg.size; e++) {
-                            datao[out_ptr + cg.elements[e].m3 + lo] += (
+                            data_o[out_ptr + cg.elements[e].m3 + lo] += (
                                 cg.elements[e].c 
-                                * data1[idx1 + cg.elements[e].m1 + l1] 
-                                * data2[idx2 + cg.elements[e].m2 + l2] 
+                                * data_1[idx1 + cg.elements[e].m1 + l1] 
+                                * data_2[idx2 + cg.elements[e].m2 + l2] 
                                 * normalize
                             );
                         }
@@ -179,43 +182,35 @@ void tensor_product_v2(const char* irrep_str1, const float* data1, const char* i
         }
         ptr1 += l1_dim * c1;
     }
-    free(irreps1);
-    free(irreps2);
-    free(irrepso);
 }
 
 
-void tensor_product_v3(const char* irrep_str1, const float* data1, const char* irrep_str2, const float* data2, const char* irrep_stro, float* datao) {
+void tensor_product_v3(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, const Irreps* irreps_o, float* data_o) {
     // this is the same as tensor_product above, except the tensor products for
     // any l1,l2,lo are replace with a call to a precompiled version in tp.c
-
-    int size1, size2, sizeo;
-    Irrep* irreps1 = parse_irrep_str(irrep_str1, &size1);
-    Irrep* irreps2 = parse_irrep_str(irrep_str2, &size2);
-    Irrep* irrepso = parse_irrep_str(irrep_stro, &sizeo);
 
     // Lookup table where the start of each out irrep will be in datao
     // only need to store one location per l/parity pair, it is cheap to hash by
     // l*(p+1)/2
     int out_ptrs[(L_MAX + 1) * 2] = {0};
     int ptr = 0;
-    for (int i = 0; i < sizeo; i++) {
-        out_ptrs[irrepso[i].l + (irrepso[i].p + 1) / 2 * L_MAX] = ptr;
-        ptr += irrepso[i].c * (2 * irrepso[i].l + 1);
+    for (int i = 0; i < irreps_o->size; i++) {
+        out_ptrs[irreps_o->irreps[i].l + (irreps_o->irreps[i].p + 1) / 2 * L_MAX] = ptr;
+        ptr += irreps_o->irreps[i].c * (2 * irreps_o->irreps[i].l + 1);
     }
 
     int ptr1 = 0;
-    for (int i1 = 0; i1 < size1; i1++) {
-        int l1 = irreps1[i1].l;
-        int c1 = irreps1[i1].c;
-        int p1 = irreps1[i1].p;
+    for (int i1 = 0; i1 < irreps_1->size; i1++) {
+        int l1 = irreps_1->irreps[i1].l;
+        int c1 = irreps_1->irreps[i1].c;
+        int p1 = irreps_1->irreps[i1].p;
         int l1_dim = 2 * l1 + 1;
 
         int ptr2 = 0;
-        for (int i2 = 0; i2 < size2; i2++) {
-            int l2 = irreps2[i2].l;
-            int c2 = irreps2[i2].c;
-            int p2 = irreps2[i2].p;
+        for (int i2 = 0; i2 < irreps_2->size; i2++) {
+            int l2 = irreps_2->irreps[i2].l;
+            int c2 = irreps_2->irreps[i2].c;
+            int p2 = irreps_2->irreps[i2].p;
             int l2_dim = 2 * l2 + 1;
 
             int po = p1 * p2;
@@ -229,7 +224,7 @@ void tensor_product_v3(const char* irrep_str1, const float* data1, const char* i
                     int idx1 = ptr1 + c1_idx * l1_dim;
                     for (int c2_idx = 0; c2_idx < c2; c2_idx++) {
                         int idx2 = ptr2 + c2_idx * l2_dim;
-                        tp(l1, l2, lo, data1 + idx1, data2 + idx2, datao + out_ptr);
+                        tp(l1, l2, lo, data_1 + idx1, data_2 + idx2, data_o + out_ptr);
                         // done writing to this irrep
                         out_ptr += (2 * lo + 1);
                     }
@@ -245,18 +240,12 @@ void tensor_product_v3(const char* irrep_str1, const float* data1, const char* i
         }
         ptr1 += l1_dim * c1;
     }
-    free(irreps1);
-    free(irreps2);
-    free(irrepso);
 }
 
 
-void spherical_harmonics(const char* irrep_str, const float x, const float y, const float z, float* out) {
-    int size;
-    Irrep* irreps = parse_irrep_str(irrep_str, &size); 
-
+void spherical_harmonics(const Irreps* irreps, const float x, const float y, const float z, float* out) {
     int lmax = 0;
-    for (int i = 0; i < size; i++) { lmax = MAX(lmax, irreps[i].l); }
+    for (int i = 0; i < irreps->size; i++) { lmax = MAX(lmax, irreps->irreps[i].l); }
 
     float r = sqrt(x * x + y * y + z * z);
 
@@ -320,9 +309,9 @@ void spherical_harmonics(const char* irrep_str, const float x, const float y, co
     }
 
     int ptr = 0;
-    for (int i = 0; i < size; i++) {
-        int l = irreps[i].l;
-        int c = irreps[i].c;
+    for (int i = 0; i < irreps->size; i++) {
+        int l = irreps->irreps[i].l;
+        int c = irreps->irreps[i].c;
         for (int cc = 0; cc < c; cc++) {
             for (int m = -l; m <= l; m++) {
                 if (m == 0) {
@@ -336,28 +325,23 @@ void spherical_harmonics(const char* irrep_str, const float x, const float y, co
             ptr += (2 * l + 1);
         }
     }
-    free(irreps);
     free(P);
 }
 
 
-void linear(const char* irreps_str_in, const float* input, const float* weight, const char* irreps_str_out, float* out) {
-    int size_in, size_out;
-    Irrep* irreps_in = parse_irrep_str(irreps_str_in, &size_in); 
-    Irrep* irreps_out = parse_irrep_str(irreps_str_out, &size_out); 
-
+void linear(const Irreps* irreps_in, const float* input, const float* weight, const Irreps* irreps_out, float* out) {
     int w_ptr = 0;
     int in_ptr = 0;
 
-    for (int i_in = 0; i_in < size_in; i_in++) {
+    for (int i_in = 0; i_in < irreps_in->size; i_in++) {
         int out_ptr = 0;
-        for (int i_out = 0; i_out < size_out; i_out++) {
+        for (int i_out = 0; i_out < irreps_out->size; i_out++) {
             // find matching output irrep - could be done in separate loop if too costly
-            if (irreps_in[i_in].l == irreps_out[i_out].l && irreps_in[i_in].p == irreps_out[i_out].p) {
-                int l = irreps_in[i_in].l;
+            if (irreps_in->irreps[i_in].l == irreps_out->irreps[i_out].l && irreps_in->irreps[i_in].p == irreps_out->irreps[i_out].p) {
+                int l = irreps_in->irreps[i_in].l;
                 int dim = 2 * l + 1;
-                int in_c = irreps_in[i_in].c;
-                int out_c = irreps_out[i_out].c;
+                int in_c = irreps_in->irreps[i_in].c;
+                int out_c = irreps_out->irreps[i_out].c;
                 float norm = sqrt(1.0 / in_c);
 
                 for (int j = 0; j < in_c; j++) {
@@ -375,10 +359,8 @@ void linear(const char* irreps_str_in, const float* input, const float* weight, 
                 w_ptr += in_c * out_c;
                 break;
             }
-            out_ptr += (irreps_out[i_out].l * 2 + 1) * irreps_out[i_out].c;
+            out_ptr += (irreps_out->irreps[i_out].l * 2 + 1) * irreps_out->irreps[i_out].c;
         }
-        in_ptr += (irreps_in[i_in].l * 2 + 1) * irreps_in[i_in].c;
+        in_ptr += (irreps_in->irreps[i_in].l * 2 + 1) * irreps_in->irreps[i_in].c;
     }
-    free(irreps_in);
-    free(irreps_out);
 }
