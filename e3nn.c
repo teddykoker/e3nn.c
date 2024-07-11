@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+#include <assert.h>
 
 #include "clebsch_gordan.h"
 #include "e3nn.h"
@@ -40,12 +42,43 @@ void irreps_free(Irreps* irreps) {
 }
 
 
+int irrep_compare(const Irrep* i1, const Irrep* i2) {
+    if (i1->l == i2->l) {
+        if (i1->p == i2->p) {
+            return 0;
+        } else if (i1->l % 2 == 0 && i1->p == EVEN) {
+            return -1;
+        } else {
+            return 1;
+        }
+    } else {
+        return i1->l - i2->l;
+    }
+}
+
+
+int irrep_dim(const Irrep* irr) {
+    return irr->c * (2 * irr->l + 1);
+}
+
+
 int irreps_dim(const Irreps* irreps) {
     int dim = 0;
     for (int i = 0; i < irreps->size; i++) {
-        dim += 2 * irreps->irreps[i].l + 1;
+        dim += irrep_dim(&irreps->irreps[i]);
     }
     return dim;
+}
+
+
+bool irreps_is_sorted(const Irreps* irreps) {
+    if (irreps->size < 2) { return true; }
+    for (int i = 1; i < irreps->size; i++) {
+        if (irrep_compare(&irreps->irreps[i-1], &irreps->irreps[i]) >= 0) {
+            return false;
+        }
+    }
+    return true;
 }
 
 
@@ -362,5 +395,31 @@ void linear(const Irreps* irreps_in, const float* input, const float* weight, co
             out_ptr += (irreps_out->irreps[i_out].l * 2 + 1) * irreps_out->irreps[i_out].c;
         }
         in_ptr += (irreps_in->irreps[i_in].l * 2 + 1) * irreps_in->irreps[i_in].c;
+    }
+}
+
+
+void concatenate(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, float* data_o) {
+    assert(irreps_is_sorted(irreps_1));
+    assert(irreps_is_sorted(irreps_2));
+    int inc_1 = 0, inc_2 = 0, inc_o = 0;
+    int i1 = 0, i2 = 0;
+    while (i1 < irreps_1->size || i2 < irreps_2->size) {
+        if (
+            (i1 < irreps_1->size) &&
+            (i2 >= irreps_2->size || irrep_compare(&irreps_1->irreps[i1], &irreps_2->irreps[i2]) <= 0)
+        ) {
+            int dim = irrep_dim(&irreps_1->irreps[i1]);
+            memcpy(data_o + inc_o, data_1 + inc_1, sizeof(float) * dim);
+            inc_1 += dim;
+            inc_o += dim;
+            i1++;
+        } else {
+            int dim = irrep_dim(&irreps_2->irreps[i2]);
+            memcpy(data_o + inc_o, data_2 + inc_2, sizeof(float) * dim);
+            inc_2 += dim;
+            inc_o += dim;
+            i2++;
+        }
     }
 }
