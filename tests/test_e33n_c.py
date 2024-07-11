@@ -53,6 +53,14 @@ e3nn_c.linear.argtypes = (
 )
 e3nn_c.linear.restype = None
 
+e3nn_c.concatenate.argtypes = (
+    ctypes.POINTER(Irreps),
+    np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
+    ctypes.POINTER(Irreps),
+    np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
+    np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
+)
+e3nn_c.concatenate.restype = None
 
 clebsch_gordan_c = ctypes.CDLL("./clebsch_gordan.so")
 
@@ -147,6 +155,25 @@ def test_linear(irreps_in, irreps_out):
     e3nn_c.irreps_free(irreps_in)
     e3nn_c.irreps_free(irreps_out)
 
+@pytest.mark.parametrize("irreps_1,irreps_2", [
+    ("2x0e + 2x1o", "3x0e + 3x1o"),
+    ("1x0e + 2x1o", "3x0e + 3x1o"),
+    ("1x0e + 2x1o", "3x0e + 3x1o + 1x2e"),
+    ("1x0e + 2x1o + 1x2e", "3x0e + 3x1o"),
+])
+def test_concatenate(irreps_1, irreps_2):
+    array_1 = e3nn_jax.normal(irreps_1, jax.random.PRNGKey(0))
+    array_2 = e3nn_jax.normal(irreps_2, jax.random.PRNGKey(1))
+    # e33n.c should concatenate and regroup
+    output = e3nn_jax.concatenate([array_1, array_2]).regroup()
+    output_c = np.zeros_like(output.array)
+    irreps_1 = e3nn_c.irreps_create(irreps_1.encode("utf-8"))
+    irreps_2 = e3nn_c.irreps_create(irreps_2.encode("utf-8"))
+    e3nn_c.concatenate(irreps_1, np.array(array_1.array), irreps_2, np.array(array_2.array), output_c)
+    assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+
+    e3nn_c.irreps_free(irreps_1)
+    e3nn_c.irreps_free(irreps_2)
 
 def test_compute_clebsch_gordan():
     l_max = 8

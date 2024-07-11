@@ -53,6 +53,6 @@ void linear(const Irreps* irreps_in, const float* input, const float* weight, co
 // concatenates irreps data together
 // NOTE: assumes inputs irreps are simplified and sorted, and will maintain
 // sorted order for output
-void concat(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, float* data_o);
+void concatenate(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, float* data_o);
 
 #endif // ifndef INCLUDED_E3NN_H
