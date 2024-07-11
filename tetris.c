@@ -95,6 +95,8 @@ int main(void){
                     layer1.irreps_tp,
                     tp,
                     &receiver_features[edge * irreps_dim(layer1.irreps_receiver)]);
+        free(sh);
+        free(tp);
     }
 
 
