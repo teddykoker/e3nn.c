@@ -45,9 +45,15 @@ void tensor_product_v3(const Irreps* irreps_1, float* data_1, const Irreps* irre
 // Real spherical harmonics Y_lm(r) of vector (x, y, z) written to out
 void spherical_harmonics(const Irreps* irreps, const float x, const float y, const float z, float* out);
 
-// Linear or self-interaction operation
+// linear or self-interaction operation
 // it is assumed that weights are raveled into a single float*, stored in the order they appear in irreps_in
-// does not support unsimplified irreps
+// NOTE: does not support unsimplified irreps
 void linear(const Irreps* irreps_in, const float* input, const float* weight, const Irreps* irreps_out, float* out);
+
+// concatenates irreps data together
+// NOTE: assumes inputs irreps are simplified and sorted, and will maintain
+// sorted order for output
+void concat(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2,
+float* data_2, float* data_o);
 
 #endif // ifndef INCLUDED_E3NN_H

@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+#include <assert.h>
 
 #include "clebsch_gordan.h"
 #include "e3nn.h"
@@ -46,6 +48,25 @@ int irreps_dim(const Irreps* irreps) {
         dim += 2 * irreps->irreps[i].l + 1;
     }
     return dim;
+}
+
+
+bool irreps_is_sorted(const Irreps* irreps) {
+    if (irreps->size < 2) { return true; }
+    for (int i = 1; i < irreps->size; i++) {
+        Irrep curr = irreps->irreps[i];
+        Irrep prev = irreps->irreps[i-1];
+        if (prev.l > curr.l) {
+            return false;
+        }
+        if ((prev.l == curr.l) 
+            && ((prev.p == curr.p) 
+                || (prev.l % 2 == 0 && prev.p == ODD) 
+                || (prev.l % 2 == 1 && prev.p == EVEN))) {
+            return false;
+        }
+    }
+    return true;
 }
 
 
@@ -363,4 +384,11 @@ void linear(const Irreps* irreps_in, const float* input, const float* weight, co
         }
         in_ptr += (irreps_in->irreps[i_in].l * 2 + 1) * irreps_in->irreps[i_in].c;
     }
+}
+
+
+void concat(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, float* data_o) {
+    assert(irreps_is_sorted(irreps_1));
+    assert(irreps_is_sorted(irreps_2));
+    // TODO
 }
