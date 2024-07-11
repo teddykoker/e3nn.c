@@ -10,19 +10,33 @@ import pytest
 
 e3nn_c = ctypes.CDLL("./e3nn.so")
 
+class Irrep(ctypes.Structure):
+    _fields_ = [("c", ctypes.c_int),
+                ("l", ctypes.c_int),
+                ("p", ctypes.c_int)]
+
+class Irreps(ctypes.Structure):
+    _fields_ = [("irreps", ctypes.POINTER(Irrep)),
+                ("size", ctypes.c_int)]
+
+e3nn_c.irreps_create.argtypes = (ctypes.c_char_p,)
+e3nn_c.irreps_create.restype = ctypes.POINTER(Irreps)
+e3nn_c.irreps_free.argtypes = (ctypes.POINTER(Irreps),)
+e3nn_c.irreps_free.restype = None
+
 for tp in [e3nn_c.tensor_product_v1, e3nn_c.tensor_product_v2, e3nn_c.tensor_product_v3]:
     tp.argtypes = (
-        ctypes.c_char_p,
+        ctypes.POINTER(Irreps),
         np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
-        ctypes.c_char_p,
+        ctypes.POINTER(Irreps),
         np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
-        ctypes.c_char_p,
+        ctypes.POINTER(Irreps),
         np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
     )
     tp.restype = None
 
 e3nn_c.spherical_harmonics.argtypes = (
-    ctypes.c_char_p,
+    ctypes.POINTER(Irreps),
     ctypes.c_float,
     ctypes.c_float,
     ctypes.c_float,
@@ -31,10 +45,10 @@ e3nn_c.spherical_harmonics.argtypes = (
 e3nn_c.spherical_harmonics.restype = None
 
 e3nn_c.linear.argtypes = (
-    ctypes.c_char_p,
+    ctypes.POINTER(Irreps),
     np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
     np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
-    ctypes.c_char_p,
+    ctypes.POINTER(Irreps),
     np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
 )
 e3nn_c.linear.restype = None
@@ -65,15 +79,22 @@ clebsch_gordan_c.compute_clebsch_gordan.restype = ctypes.c_float
 def test_tensor_product(fn, input1, input2):
     output = e3nn_jax.tensor_product(input1, input2)
     output_c = np.zeros_like(output.array, dtype=ctypes.c_float)
+    irreps1 = e3nn_c.irreps_create(repr(input1.irreps).encode("utf-8"))
+    irreps2 = e3nn_c.irreps_create(repr(input2.irreps).encode("utf-8"))
+    irrepso = e3nn_c.irreps_create(repr(output.irreps).encode("utf-8"))
     fn(
-        repr(input1.irreps).encode("utf-8"),
+        irreps1,
         np.array(input1.array, dtype=ctypes.c_float),
-        repr(input2.irreps).encode("utf-8"),
+        irreps2,
         np.array(input2.array, dtype=ctypes.c_float),
-        repr(output.irreps).encode("utf-8"),
+        irrepso,
         output_c
     )
     assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+
+    e3nn_c.irreps_free(irreps1)
+    e3nn_c.irreps_free(irreps2)
+    e3nn_c.irreps_free(irrepso)
 
 
 @pytest.mark.parametrize("irreps", [
@@ -94,8 +115,11 @@ def test_tensor_product(fn, input1, input2):
 def test_spherical_harmonics(irreps, input):
     output = e3nn_jax.spherical_harmonics(irreps, np.array(input), normalize=True, normalization="component")
     output_c = np.zeros_like(output.array)
-    e3nn_c.spherical_harmonics(irreps.encode("utf-8"), *input, output_c)
+    irreps = e3nn_c.irreps_create(irreps.encode("utf-8"))
+    e3nn_c.spherical_harmonics(irreps, *input, output_c)
     assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+
+    e3nn_c.irreps_free(irreps)
 
 
 @pytest.mark.parametrize("irreps_in,irreps_out", [
@@ -115,8 +139,13 @@ def test_linear(irreps_in, irreps_out):
     
     weight_c = np.concatenate([w.ravel() for w in weight["params"].values()])
     output_c = np.zeros_like(output.array)
-    e3nn_c.linear(irreps_in.encode("utf-8"), np.array(input.array), weight_c, irreps_out.encode("utf-8"), output_c)
+    irreps_in = e3nn_c.irreps_create(irreps_in.encode("utf-8"))
+    irreps_out = e3nn_c.irreps_create(irreps_out.encode("utf-8"))
+    e3nn_c.linear(irreps_in, np.array(input.array), weight_c, irreps_out, output_c)
     assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+
+    e3nn_c.irreps_free(irreps_in)
+    e3nn_c.irreps_free(irreps_out)
 
 
 def test_compute_clebsch_gordan():
