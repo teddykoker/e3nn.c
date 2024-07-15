@@ -11,53 +11,53 @@ Currently the only operations implemented are the tensor product, and spherical 
 ## Message Computation
 
 ```c
-// message_example.c
 #include <stdio.h>
 
 #include "e3nn.h"
 
+// example.c
 int main(void){
 
-     float node_position_sh[9] = {0};
-     Irreps* node_irreps = irreps_create("1x0e + 1x1o + 1x2e");
-     spherical_harmonics(node_irreps, 1, 2, 3, node_position_sh);
+    float node_position_sh[9] = { 0 };
+    Irreps* node_irreps = irreps_create("1x0e + 1x1o + 1x2e");
+    spherical_harmonics(node_irreps, 1, 2, 3, node_position_sh);
 
-     printf("sh ["); for (int i = 0; i < 9; i++){ printf("%.2f, ", node_position_sh[i]); } printf("]\n");
-     irreps_free(node_irreps);
+    printf("sh ["); for (int i = 0; i < 9; i++){ printf("%.2f, ", node_position_sh[i]); } printf("]\n");
+    irreps_free(node_irreps);
 
-     float neighbor_feature[] = {7,8,9};
-     float product[27] = { 0 };
-     Irreps* node_sh_irreps = irreps_create("1x0e + 1x1o + 1x2e");
-     Irreps* neighbor_feature_irreps = irreps_create("1x1e");
-     Irreps* product_irreps = irreps_create("1x0o + 1x1o + 2x1e + 1x2e + 1x2o + 1x3e");
-     tensor_product(node_sh_irreps, node_position_sh, 
-                    neighbor_feature_irreps, neighbor_feature, 
-                    product_irreps, product);
+    float neighbor_feature[] = { 7, 8, 9 };
+    float product[27] = { 0 };
+    Irreps* node_sh_irreps = irreps_create("1x0e + 1x1o + 1x2e");
+    Irreps* neighbor_feature_irreps = irreps_create("1x1e");
+    Irreps* product_irreps = irreps_create("1x0o + 1x1o + 2x1e + 1x2e + 1x2o + 1x3e");
+    tensor_product(node_sh_irreps, node_position_sh, 
+                   neighbor_feature_irreps, neighbor_feature, 
+                   product_irreps, product);
 
-     printf("product ["); for (int i = 0; i < 27; i++){ printf("%.2f, ", product[i]); } printf("]\n");
-     irreps_free(node_sh_irreps);
-     irreps_free(neighbor_feature_irreps);
+    printf("product ["); for (int i = 0; i < 27; i++){ printf("%.2f, ", product[i]); } printf("]\n");
+    irreps_free(node_sh_irreps);
+    irreps_free(neighbor_feature_irreps);
 
-     float weights[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-     ///               [ 1 x 1 weight] [1 x 1 weight] [2 x 2 weight] [1 x 1 weight] [1 x 1 weight] [ 1 x 1 weight]
-     float output[27] = { 0 };
-     Irreps* output_irreps = irreps_create("1x0o + 1x1o + 2x1e + 1x2e + 1x2o + 1x3e");
-     linear(product_irreps,
-            product,
-            weights,
-            output_irreps,
-            output);
+    float weights[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    //                [ 1 x 1 weight] [1 x 1 weight] [2 x 2 weight] [1 x 1 weight] [1 x 1 weight] [ 1 x 1 weight]
+    float output[27] = { 0 };
+    Irreps* output_irreps = irreps_create("1x0o + 1x1o + 2x1e + 1x2e + 1x2o + 1x3e");
+    linear(product_irreps,
+           product,
+           weights,
+           output_irreps,
+           output);
 
-     printf("message ["); for (int i = 0; i < 27; i++) { printf("%.2f, ", output[i]); } printf("]\n");
-     irreps_free(product_irreps);
-     irreps_free(output_irreps);
+    printf("output ["); for (int i = 0; i < 27; i++) { printf("%.2f, ", output[i]); } printf("]\n");
+    irreps_free(product_irreps);
+    irreps_free(output_irreps);
 
-     return 0;
+    return 0;
 }
 ```
 
 ```shell
-$ make message_example && ./message_example
+$ make example && ./example
 sh [1.00, 0.46, 0.93, 1.39, 0.83, 0.55, -0.16, 1.66, 1.11, ]
 product [13.36, -1.96, 3.93, -1.96, 7.00, 8.00, 9.00, 2.63, 9.50, 16.36, -2.71, 0.00, 4.69, 2.71, -1.36, 9.82, 7.20, -0.38, 13.75, 6.55, 10.76, 13.42, 2.58, -9.40, 5.91, 11.50, 2.93, ]
 output [13.36, -3.93, 7.86, -3.93, 24.13, 50.54, 76.95, 30.94, 62.91, 94.88, -18.97, 0.00, 32.86, 18.97, -9.49, 78.56, 57.61, -3.02, 109.98, 52.37, 96.83, 120.75, 23.18, -84.62, 53.18, 103.50, 26.41, ]
@@ -69,11 +69,10 @@ Writes the same values to buffer `output` as the following Python code:
 import jax.numpy as jnp
 import e3nn_jax as e3nn
 
-# Computed message (for e.g. force) between two atoms
 
-node_position = jnp.asarray([1,2,3])
+node_position = jnp.asarray([1, 2, 3])
 node_position_sh = e3nn.spherical_harmonics("1x0e + 1x1o + 1x2e", node_position, normalize=True, normalization="component")
-print("sph", node_position_sh.array)
+print("sp ", node_position_sh.array)
 
 neighbor_feature = e3nn.IrrepsArray("1x1e", jnp.asarray([7,8,9]))
 tp = e3nn.tensor_product(node_position_sh, neighbor_feature)
@@ -87,7 +86,7 @@ weights = {'params': {'w[0,0] 1x0o,1x0o': jnp.asarray([[1]]),
                       'w[4,4] 1x2o,1x2o': jnp.asarray([[8]]),
                       'w[5,5] 1x3e,1x3e': jnp.asarray([[9]])}}
 message = linear.apply(weights, tp)
-print("output",message.array)
+print("output", message.array)
 ```
 
 ## Usage
