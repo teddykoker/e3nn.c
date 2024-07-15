@@ -46,7 +46,8 @@ int irrep_compare(const Irrep* i1, const Irrep* i2) {
     if (i1->l == i2->l) {
         if (i1->p == i2->p) {
             return 0;
-        } else if (i1->l % 2 == 0 && i1->p == EVEN) {
+        } else if ((i1->l % 2 == 0 && i1->p == EVEN) || 
+                   (i1->l % 2 == 1 && i1->p == ODD)) {
             return -1;
         } else {
             return 1;
@@ -82,7 +83,7 @@ bool irreps_is_sorted(const Irreps* irreps) {
 }
 
 
-void tensor_product_v1(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, const Irreps* irreps_o, float* data_o) {
+void tensor_product_v1(const Irreps* irreps_1, const float* data_1, const Irreps* irreps_2, const float* data_2, const Irreps* irreps_o, float* data_o) {
     build_clebsch_gordan_cache();
 
     // Lookup table where the start of each out irrep will be in datao
@@ -149,7 +150,7 @@ void tensor_product_v1(const Irreps* irreps_1, float* data_1, const Irreps* irre
 }
 
 
-void tensor_product_v2(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, const Irreps* irreps_o, float* data_o) {
+void tensor_product_v2(const Irreps* irreps_1, const float* data_1, const Irreps* irreps_2, const float* data_2, const Irreps* irreps_o, float* data_o) {
     // this is the same as tensor_product above, except the inner loops over
     // m1, m2, mo are removed and replaced with lookups into the sparse
     // Clebsch-Gordan coefficients
@@ -218,7 +219,7 @@ void tensor_product_v2(const Irreps* irreps_1, float* data_1, const Irreps* irre
 }
 
 
-void tensor_product_v3(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, const Irreps* irreps_o, float* data_o) {
+void tensor_product_v3(const Irreps* irreps_1, const float* data_1, const Irreps* irreps_2, const float* data_2, const Irreps* irreps_o, float* data_o) {
     // this is the same as tensor_product above, except the tensor products for
     // any l1,l2,lo are replace with a call to a precompiled version in tp.c
 
@@ -399,7 +400,7 @@ void linear(const Irreps* irreps_in, const float* input, const float* weight, co
 }
 
 
-void concatenate(const Irreps* irreps_1, float* data_1, const Irreps* irreps_2, float* data_2, float* data_o) {
+void concatenate(const Irreps* irreps_1, const float* data_1, const Irreps* irreps_2, const float* data_2, float* data_o) {
     assert(irreps_is_sorted(irreps_1));
     assert(irreps_is_sorted(irreps_2));
     int inc_1 = 0, inc_2 = 0, inc_o = 0;

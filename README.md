@@ -98,6 +98,70 @@ output = linear.apply(w, input3)
 print("output", output)
 ```
 
+## Tetris
+
+See `tetris.c` which implements a full E(3) equivariant neural network for the
+classification of tetrominoes. The model can be trained with `python
+train_tetris.py`, which saves the model weights to a binary format in
+`tetris.bin`. The model can be used for inference by supplying it 4 xyz
+coordinates on the command line. `python run_tetris.py` should produce the same
+outputs using the JAX implementation.
+
+```shell
+$ make tetris
+
+# usage
+$ ./tetris
+usage: ./tetris x1 y1 z1 x2 y2 z2 x3 y3 z3 x4 y4 z4
+
+# zigzag
+$ ./tetris 0 0 0 1 0 0 1 1 0 2 1 0
+logits:
+chiral 1    -0.00000
+chiral 2    0.00000
+square      4.51680
+line        1.20807
+corner      5.59851
+L           4.09760
+T           5.82929
+zigzag      6.47695
+
+# line 
+$ ./tetris 0 0 0 0 0 1 0 0 2 0 0 3
+logits:
+chiral 1    -0.00000
+chiral 2    0.00000
+square      0.72002
+line        8.12406
+corner      -1.34077
+L           6.86459
+T           4.45846
+zigzag      1.23425
+
+# rotated line
+$ ./tetris 0 0 0 1 0 0 2 0 0 3 0 0  
+logits:
+chiral 1    -0.00000
+chiral 2    0.00000
+square      0.72002
+line        8.12406
+corner      -1.34077
+L           6.86459
+T           4.45846
+zigzag      1.23425
+
+# line with python 
+python run_tetris.py 0 0 0 0 0 1 0 0 2 0 0 3
+chiral 1    -0.00000
+chiral 2    0.00000
+square      0.72002
+line        8.12406
+corner      -1.34077
+L           6.86459
+T           4.45846
+zigzag      1.23425
+```
+
 ## Usage
 
 See example above and in `example.c`. Run with
