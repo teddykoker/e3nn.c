@@ -36,6 +36,51 @@ Irreps* irreps_create(const char* str) {
 }
 
 
+Irreps* irreps_tensor_product(const Irreps* irreps_1, const Irreps* irreps_2) {
+    // Lookup table for channel count for each irrep in output
+    // indexed by (l + (p+1)/2 * (L_MAX + 1))
+    int c_count[(L_MAX + 1) * 2] = {0};
+    for (int i1 = 0; i1 < irreps_1->size; i1++) {
+        int l1 = irreps_1->irreps[i1].l;
+        int c1 = irreps_1->irreps[i1].c;
+        int p1 = irreps_1->irreps[i1].p;
+        for (int i2 = 0; i2 < irreps_2->size; i2++) {
+            int l2 = irreps_2->irreps[i2].l;
+            int c2 = irreps_2->irreps[i2].c;
+            int p2 = irreps_2->irreps[i2].p;
+            int po = p1 * p2;
+            int lo_min = abs(l1 - l2);
+            int lo_max = l1 + l2;
+            for (int lo = lo_min; lo <= lo_max; lo++) {
+                c_count[lo + (po + 1) / 2 * (L_MAX + 1)] += c1 * c2;
+            }
+        }
+    }
+    Irreps* irreps = (Irreps*) malloc(sizeof(Irreps));
+    irreps->size = 0;
+    for (int i = 0; i < (L_MAX + 1) * 2; i++) {
+        if (c_count[i] != 0) {
+            irreps -> size++;
+        }
+    }
+    irreps->irreps = (Irrep*) malloc(irreps->size * sizeof(Irrep));
+    int index = 0;
+    for (int l = 0; l <= L_MAX; l++) {
+        int p = l % 2 == 0 ? EVEN : ODD;
+        int c = c_count[l + (p + 1) / 2 * (L_MAX + 1)];
+        if (c > 0) {
+            irreps->irreps[index++] = (Irrep){ c, l, p };
+        }
+        p *= -1;
+        c = c_count[l + (p + 1) / 2 * (L_MAX + 1)];
+        if (c > 0) {
+            irreps->irreps[index++] = (Irrep){ c, l, p };
+        }
+    }
+    return irreps;
+}
+
+
 void irreps_free(Irreps* irreps) {
     free(irreps->irreps);
     free(irreps);
@@ -63,6 +108,17 @@ int irrep_dim(const Irrep* irr) {
 }
 
 
+void irreps_print(const Irreps* irreps) {
+    for (int i = 0; i < irreps->size; i++) {
+        printf("%dx%d%s", irreps->irreps[i].c, irreps->irreps[i].l, irreps->irreps[i].p == EVEN ? "e" : "o");
+        if (i < irreps->size - 1) {
+            printf(" + ");
+        }
+    }
+    printf("\n");
+}
+
+    
 int irreps_dim(const Irreps* irreps) {
     int dim = 0;
     for (int i = 0; i < irreps->size; i++) {
@@ -87,12 +143,12 @@ void tensor_product_v1(const Irreps* irreps_1, const float* data_1, const Irreps
     build_clebsch_gordan_cache();
 
     // Lookup table where the start of each out irrep will be in datao
-    // only need to store one location per l/parity pair, it is cheap to hash by
-    // l*(p+1)/2
+    // only need to store one location per l/parity pair, it is cheap to hash
+    // by (l + (p+1)/2 * (L_MAX + 1))
     int out_ptrs[(L_MAX + 1) * 2] = {0};
     int ptr = 0;
     for (int i = 0; i < irreps_o->size; i++) {
-        out_ptrs[irreps_o->irreps[i].l + (irreps_o->irreps[i].p + 1) / 2 * L_MAX] = ptr;
+        out_ptrs[irreps_o->irreps[i].l + (irreps_o->irreps[i].p + 1) / 2 * (L_MAX + 1)] = ptr;
         ptr += irreps_o->irreps[i].c * (2 * irreps_o->irreps[i].l + 1);
     }
 
@@ -116,7 +172,7 @@ void tensor_product_v1(const Irreps* irreps_1, const float* data_1, const Irreps
 
             for (int lo = lo_min; lo <= lo_max; lo++) {
                 float normalize = sqrt(2 * lo + 1);
-                int out_ptr = out_ptrs[lo + (po + 1) / 2 * L_MAX];
+                int out_ptr = out_ptrs[lo + (po + 1) / 2 * (L_MAX + 1)];
 
                 for (int c1_idx = 0; c1_idx < c1; c1_idx++) {
                     for (int c2_idx = 0; c2_idx < c2; c2_idx++) {
@@ -141,7 +197,7 @@ void tensor_product_v1(const Irreps* irreps_1, const float* data_1, const Irreps
                 // there is more than one path to the same irrep as long as we
                 // iterate through the irreps in the same order, this should be
                 // functionally equivalent to the e3nn-jax implementation 
-                out_ptrs[lo + (po + 1) / 2 * L_MAX] += (2 * lo + 1) * c1 * c2;
+                out_ptrs[lo + (po + 1) / 2 * (L_MAX + 1)] += (2 * lo + 1) * c1 * c2;
             }
             ptr2 += l2_dim * c2;
         }
@@ -158,11 +214,11 @@ void tensor_product_v2(const Irreps* irreps_1, const float* data_1, const Irreps
 
      // Lookup table where the start of each out irrep will be in datao
     // only need to store one location per l/parity pair, it is cheap to hash by
-    // l*(p+1)/2
+    // by (l+ (p+1)/2 * (L_MAX + 1))
     int out_ptrs[(L_MAX + 1) * 2] = {0};
     int ptr = 0;
     for (int i = 0; i < irreps_o->size; i++) {
-        out_ptrs[irreps_o->irreps[i].l + (irreps_o->irreps[i].p + 1) / 2 * L_MAX] = ptr;
+        out_ptrs[irreps_o->irreps[i].l + (irreps_o->irreps[i].p + 1) / 2 * (L_MAX + 1)] = ptr;
         ptr += irreps_o->irreps[i].c * (2 * irreps_o->irreps[i].l + 1);
     }
 
@@ -186,7 +242,7 @@ void tensor_product_v2(const Irreps* irreps_1, const float* data_1, const Irreps
 
             for (int lo = lo_min; lo <= lo_max; lo++) {
                 float normalize = sqrt(2 * lo + 1);
-                int out_ptr = out_ptrs[lo + (po + 1) / 2 * L_MAX];
+                int out_ptr = out_ptrs[lo + (po + 1) / 2 * (L_MAX + 1)];
                 SparseClebschGordanMatrix cg = sparse_clebsch_gordan(l1, l2, lo);
 
                 for (int c1_idx = 0; c1_idx < c1; c1_idx++) {
@@ -210,7 +266,7 @@ void tensor_product_v2(const Irreps* irreps_1, const float* data_1, const Irreps
                 // there is more than one path to the same irrep as long as we
                 // iterate through the irreps in the same order, this should be
                 // functionally equivalent to the e3nn-jax implementation 
-                out_ptrs[lo + (po + 1) / 2 * L_MAX] += (2 * lo + 1) * c1 * c2;
+                out_ptrs[lo + (po + 1) / 2 * (L_MAX + 1)] += (2 * lo + 1) * c1 * c2;
             }
             ptr2 += l2_dim * c2;
         }
@@ -224,12 +280,12 @@ void tensor_product_v3(const Irreps* irreps_1, const float* data_1, const Irreps
     // any l1,l2,lo are replace with a call to a precompiled version in tp.c
 
     // Lookup table where the start of each out irrep will be in datao
-    // only need to store one location per l/parity pair, it is cheap to hash by
-    // l*(p+1)/2
+    // only need to store one location per l/parity pair, it is cheap to hash
+    // by (l + (p+1)/2 * (L_MAX + 1))
     int out_ptrs[(L_MAX + 1) * 2] = {0};
     int ptr = 0;
     for (int i = 0; i < irreps_o->size; i++) {
-        out_ptrs[irreps_o->irreps[i].l + (irreps_o->irreps[i].p + 1) / 2 * L_MAX] = ptr;
+        out_ptrs[irreps_o->irreps[i].l + (irreps_o->irreps[i].p + 1) / 2 * (L_MAX + 1)] = ptr;
         ptr += irreps_o->irreps[i].c * (2 * irreps_o->irreps[i].l + 1);
     }
 
@@ -253,7 +309,7 @@ void tensor_product_v3(const Irreps* irreps_1, const float* data_1, const Irreps
 
             for (int lo = lo_min; lo <= lo_max; lo++) {
                 // float normalize = sqrt(2 * lo + 1);
-                int out_ptr = out_ptrs[lo + (po + 1) / 2 * L_MAX];
+                int out_ptr = out_ptrs[lo + (po + 1) / 2 * (L_MAX + 1)];
                 for (int c1_idx = 0; c1_idx < c1; c1_idx++) {
                     int idx1 = ptr1 + c1_idx * l1_dim;
                     for (int c2_idx = 0; c2_idx < c2; c2_idx++) {
@@ -268,7 +324,7 @@ void tensor_product_v3(const Irreps* irreps_1, const float* data_1, const Irreps
                 // there is more than one path to the same irrep as long as we
                 // iterate through the irreps in the same order, this should be
                 // functionally equivalent to the e3nn-jax implementation 
-                out_ptrs[lo + (po + 1) / 2 * L_MAX] += (2 * lo + 1) * c1 * c2;
+                out_ptrs[lo + (po + 1) / 2 * (L_MAX + 1)] += (2 * lo + 1) * c1 * c2;
             }
             ptr2 += l2_dim * c2;
         }

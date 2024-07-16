@@ -22,11 +22,17 @@ typedef struct {
 // create Irreps struct from string
 Irreps* irreps_create(const char* str);
 
+// create Irreps struct from tensor product of two Irreps
+Irreps* irreps_tensor_product(const Irreps*, const Irreps*);
+
 // free Irreps struct
 void irreps_free(Irreps* irreps);
 
 // dimension of irreps
 int irreps_dim(const Irreps* irreps);
+
+// print out irreps
+void irreps_print(const Irreps* irreps);
 
 // tensor product between data1 and data2, written to datao, with respective
 // representation strings irrep_str1, irrep_str2, irrep_stro
