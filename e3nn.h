@@ -25,6 +25,9 @@ Irreps* irreps_create(const char* str);
 // create Irreps struct from tensor product of two Irreps
 Irreps* irreps_tensor_product(const Irreps*, const Irreps*);
 
+// create Irreps struct from concatenation of two Irreps
+Irreps* irreps_concatenate(const Irreps*, const Irreps*);
+
 // free Irreps struct
 void irreps_free(Irreps* irreps);
 

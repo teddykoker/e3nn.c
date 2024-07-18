@@ -81,12 +81,6 @@ Irreps* irreps_tensor_product(const Irreps* irreps_1, const Irreps* irreps_2) {
 }
 
 
-void irreps_free(Irreps* irreps) {
-    free(irreps->irreps);
-    free(irreps);
-}
-
-
 int irrep_compare(const Irrep* i1, const Irrep* i2) {
     if (i1->l == i2->l) {
         if (i1->p == i2->p) {
@@ -100,6 +94,53 @@ int irrep_compare(const Irrep* i1, const Irrep* i2) {
     } else {
         return i1->l - i2->l;
     }
+}
+
+
+bool irreps_is_sorted(const Irreps* irreps) {
+    if (irreps->size < 2) { return true; }
+    for (int i = 1; i < irreps->size; i++) {
+        if (irrep_compare(&irreps->irreps[i-1], &irreps->irreps[i]) >= 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+Irreps* irreps_concatenate(const Irreps* irreps_1, const Irreps* irreps_2) {
+    assert(irreps_is_sorted(irreps_1));
+    assert(irreps_is_sorted(irreps_2));
+    Irreps* irreps = (Irreps*) malloc(sizeof(Irreps));
+    irreps->size = 0;
+    // allocate for worst case and realloc later
+    irreps->irreps = (Irrep*) malloc((irreps_1->size + irreps_2->size) * sizeof(Irrep));
+    int i1 = 0, i2 = 0;
+    while (i1 < irreps_1->size || i2 < irreps_2->size) {
+        Irrep write_irr;
+        if (
+            (i1 < irreps_1->size) &&
+            (i2 >= irreps_2->size || irrep_compare(&irreps_1->irreps[i1], &irreps_2->irreps[i2]) <= 0)) {
+            write_irr = irreps_1->irreps[i1++];
+        } else {
+            write_irr = irreps_2->irreps[i2++];
+        }
+
+        if (irreps->size == 0 || irrep_compare(&write_irr, &irreps->irreps[irreps->size - 1])) {
+            irreps->irreps[irreps->size] = write_irr;
+            irreps->size += 1;
+        } else {
+            irreps->irreps[irreps->size - 1].c += write_irr.c;
+        }
+    }
+    irreps->irreps = (Irrep*) realloc(irreps->irreps, irreps->size * sizeof(Irrep));
+    return irreps;
+}
+
+
+void irreps_free(Irreps* irreps) {
+    free(irreps->irreps);
+    free(irreps);
 }
 
 
@@ -128,15 +169,6 @@ int irreps_dim(const Irreps* irreps) {
 }
 
 
-bool irreps_is_sorted(const Irreps* irreps) {
-    if (irreps->size < 2) { return true; }
-    for (int i = 1; i < irreps->size; i++) {
-        if (irrep_compare(&irreps->irreps[i-1], &irreps->irreps[i]) >= 0) {
-            return false;
-        }
-    }
-    return true;
-}
 
 
 void tensor_product_v1(const Irreps* irreps_1, const float* data_1, const Irreps* irreps_2, const float* data_2, const Irreps* irreps_o, float* data_o) {
@@ -464,8 +496,7 @@ void concatenate(const Irreps* irreps_1, const float* data_1, const Irreps* irre
     while (i1 < irreps_1->size || i2 < irreps_2->size) {
         if (
             (i1 < irreps_1->size) &&
-            (i2 >= irreps_2->size || irrep_compare(&irreps_1->irreps[i1], &irreps_2->irreps[i2]) <= 0)
-        ) {
+            (i2 >= irreps_2->size || irrep_compare(&irreps_1->irreps[i1], &irreps_2->irreps[i2]) <= 0)) {
             int dim = irrep_dim(&irreps_1->irreps[i1]);
             memcpy(data_o + inc_o, data_1 + inc_1, sizeof(float) * dim);
             inc_1 += dim;
