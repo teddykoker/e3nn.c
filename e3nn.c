@@ -126,7 +126,7 @@ Irreps* irreps_concatenate(const Irreps* irreps_1, const Irreps* irreps_2) {
             write_irr = irreps_2->irreps[i2++];
         }
 
-        if (irreps->size == 0 || irrep_compare(&write_irr, &irreps->irreps[irreps->size - 1])) {
+        if (irreps->size == 0 || irrep_compare(&write_irr, &irreps->irreps[irreps->size - 1]) > 0) {
             irreps->irreps[irreps->size] = write_irr;
             irreps->size += 1;
         } else {
