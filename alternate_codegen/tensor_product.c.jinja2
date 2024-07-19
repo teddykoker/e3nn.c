@@ -1,0 +1,36 @@
+// This is an automatically generated kernel for performing a tensor product and contraction
+void {{func_name}} (
+    const {{in_1_type}}* in_1, 
+    const {{in_2_type}}* in_2, 
+    {{out_type}}* out)
+{   
+    // Define CG Coefficients 
+    {% for coefficient in coefficients %}
+    const {{coeff_type}} C_{{coefficient.index}} = {{coefficient.value}};
+    {% endfor %}
+
+    // Define Input Values
+    {% for input in inputs %}
+    {{input.type}} in_{{input.name}}_{{input.index}} = in_{{input.name}}[{{input.index}}];
+    {% endfor %}
+
+    // Define Output Accumulators 
+    {% for output in outputs %}
+    {{out_type}} out_{{output.index}} = 0;
+    {% endfor %}
+
+    // Perform Outer Products  
+    {% for outer_product in outer_products %}
+    const {{out_type}} op_{{outer_product.in_1_index}}_{{outer_product.in_2_index}} = in_1_{{outer_product.in_1_index}} * in_2_{{outer_product.in_2_index}};
+    {% endfor %}
+
+    // Perform Contractions
+    {% for contraction in contractions %}
+    out_{{contraction.out_index}} {{contraction.sign}}= op_{{contraction.in_1_index}}_{{contraction.in_2_index}} * C_{{contraction.coeff_index}};
+    {% endfor %}
+
+    // Write Output
+    {% for output in outputs %}
+    out[{{output.index}}] = out_{{output.index}}; 
+    {% endfor %}
+}
