@@ -138,6 +138,30 @@ Irreps* irreps_concatenate(const Irreps* irreps_1, const Irreps* irreps_2) {
 }
 
 
+Irreps* irreps_linear(const Irreps* irreps_in, const Irreps* irreps_out, const bool force_irreps_out) {
+    Irreps* irreps = (Irreps*) malloc(sizeof(Irreps));
+    irreps->size = 0;
+    irreps->irreps = (Irrep*) malloc(irreps_out->size * sizeof(Irrep));
+
+    for (int i_out = 0; i_out < irreps_out->size; i_out++) {
+        if (force_irreps_out) {
+            irreps->irreps[irreps->size++] = irreps_out->irreps[i_out];
+            continue;
+        }
+        for (int i_in = 0; i_in < irreps_in->size; i_in++) {
+            if (irrep_compare(&irreps_in->irreps[i_in], &irreps_out->irreps[i_out]) == 0) {
+                irreps->irreps[irreps->size++] = irreps_out->irreps[i_out];
+                break;
+            }
+        }
+    }
+    if (!force_irreps_out) {
+        irreps->irreps = (Irrep*) realloc(irreps->irreps, irreps->size * sizeof(Irrep));
+    }
+    return irreps;
+}
+
+
 void irreps_free(Irreps* irreps) {
     free(irreps->irreps);
     free(irreps);
