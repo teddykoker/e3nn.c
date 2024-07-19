@@ -18,6 +18,7 @@ print(
 #include "e3nn.h"
 
 float randn(void) {
+    // Box-Muller transform
     static int generate = 0;
     static float z0, z1;
     generate = !generate;
