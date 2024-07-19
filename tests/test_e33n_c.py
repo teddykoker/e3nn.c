@@ -24,7 +24,7 @@ e3nn_c.irreps_create.restype = ctypes.POINTER(Irreps)
 e3nn_c.irreps_free.argtypes = (ctypes.POINTER(Irreps),)
 e3nn_c.irreps_free.restype = None
 
-for tp in [e3nn_c.tensor_product_v1, e3nn_c.tensor_product_v2, e3nn_c.tensor_product_v3]:
+for tp in [e3nn_c.tensor_product_v1, e3nn_c.tensor_product_v2, e3nn_c.tensor_product_v3, e3nn_c.tensor_product_v4]:
     tp.argtypes = (
         ctypes.POINTER(Irreps),
         np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
@@ -78,7 +78,8 @@ clebsch_gordan_c.compute_clebsch_gordan.restype = ctypes.c_float
 @pytest.mark.parametrize("fn", [
     # e3nn_c.tensor_product_v1, # commenting out for now bc slow
     # e3nn_c.tensor_product_v2, # commenting out for now bc slow
-    e3nn_c.tensor_product_v3,
+    # e3nn_c.tensor_product_v3,
+    e3nn_c.tensor_product_v4,
 ])
 @pytest.mark.parametrize("input1,input2", [
     (e3nn_jax.normal("2x0e + 1x1o", jax.random.PRNGKey(0)), e3nn_jax.normal("1x0o + 1x2o", jax.random.PRNGKey(0))),
