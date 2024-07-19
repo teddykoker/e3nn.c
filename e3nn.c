@@ -36,6 +36,15 @@ Irreps* irreps_create(const char* str) {
 }
 
 
+Irreps* irreps_copy(const Irreps* irreps) {
+    Irreps* copy = (Irreps*) malloc(sizeof(Irreps));
+    copy->size = irreps->size;
+    copy->irreps = (Irrep*) malloc(copy->size * sizeof(Irrep));
+    memcpy(copy->irreps, irreps->irreps, copy->size * sizeof(Irrep));
+    return copy;
+}
+
+
 Irreps* irreps_tensor_product(const Irreps* irreps_1, const Irreps* irreps_2) {
     // Lookup table for channel count for each irrep in output
     // indexed by (l + (p+1)/2 * (L_MAX + 1))

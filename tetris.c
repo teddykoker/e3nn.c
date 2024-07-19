@@ -61,8 +61,23 @@ typedef struct {
 } Layer;
 
 
-void layer_forward(Layer* layer, const float* node_input, const float pos[][3], int num_node, const Neighborlist* nl, float* node_output) {
+Layer layer_create(const Irreps* irreps_in, const Irreps* irreps_sh, const Irreps* irreps_out) {
+    // determine intermediary irreps and weight sizes for layer
+    Layer layer;
+    layer.irreps_sh=irreps_copy(irreps_sh);
+    layer.irreps_sender=irreps_copy(irreps_in);
+    layer.irreps_tp=irreps_tensor_product(layer.irreps_sender, layer.irreps_sh);
+    layer.irreps_receiver=irreps_concatenate(layer.irreps_sender, layer.irreps_tp);
+    layer.irreps_node=irreps_linear(layer.irreps_receiver, irreps_out, false);
+    layer.linear_weight_size=linear_weight_size(layer.irreps_receiver, layer.irreps_node);
+    layer.shortcut_weight_size=linear_weight_size(layer.irreps_sender, layer.irreps_node);
+    layer.denominator=1.5;
+    return layer;
+}
 
+
+// the main forward pass for each layer
+void layer_forward(Layer* layer, const float* node_input, const float pos[][3], int num_node, const Neighborlist* nl, float* node_output) {
     // intermediary storage for spherical harmonics, tensor product, messages,
     // received messages, linear output, and shortcut output
     float* sh           = (float *) malloc(irreps_dim(layer->irreps_sh) * sizeof(float));
@@ -163,38 +178,22 @@ typedef struct {
 
 
 Model* model_create(void) {
-    // TODO: some of these must be manually configured and should be loaded from a config file
-    // some irreps can be computed at run time as well
-    // weight sizes are also able to be computed at runtime
+    Irreps* irreps_hidden = irreps_create("32x0e + 32x0o + 8x1o + 8x1e + 8x2e + 8x2o");
+    Irreps* irreps_out = irreps_create("1x0o + 7x0e");
+    Irreps* irreps_sh = irreps_create("1x1o + 1x2e + 1x3o");
+    Irreps* irreps_input = irreps_create("1x0e");
+
     Model* model = (Model *) malloc(sizeof(Model));
     model->layers = (Layer *) malloc(3 * sizeof(Layer));
 
-    model->layers[0].irreps_sh=irreps_create("1x1o + 1x2e + 1x3o");
-    model->layers[0].irreps_sender=irreps_create("1x0e");
-    model->layers[0].irreps_tp=irreps_create("1x1o + 1x2e + 1x3o");
-    model->layers[0].irreps_receiver=irreps_create("1x0e + 1x1o + 1x2e + 1x3o");
-    model->layers[0].irreps_node=irreps_create("32x0e + 8x1o + 8x2e");
-    model->layers[0].linear_weight_size=48;
-    model->layers[0].shortcut_weight_size=32;
-    model->layers[0].denominator=1.5;
+    model->layers[0] = layer_create(irreps_input, irreps_sh, irreps_hidden);
+    model->layers[1] = layer_create(model->layers[0].irreps_node, irreps_sh, irreps_hidden);
+    model->layers[2] = layer_create(model->layers[1].irreps_node, irreps_sh, irreps_out);
 
-    model->layers[1].irreps_sh=irreps_create("1x1o + 1x2e + 1x3o");
-    model->layers[1].irreps_sender=irreps_create("32x0e + 8x1o + 8x2e");
-    model->layers[1].irreps_tp=irreps_create("16x0e + 56x1o + 16x1e + 56x2e + 24x2o + 56x3o + 16x3e + 16x4e + 8x4o + 8x5o");
-    model->layers[1].irreps_receiver=irreps_create("48x0e + 64x1o + 16x1e + 64x2e + 24x2o + 56x3o + 16x3e + 16x4e + 8x4o + 8x5o");
-    model->layers[1].irreps_node=irreps_create("32x0e + 8x1o + 8x1e + 8x2e + 8x2o");
-    model->layers[1].linear_weight_size=2880;
-    model->layers[1].shortcut_weight_size=1152;
-    model->layers[1].denominator=1.5;
-
-    model->layers[2].irreps_sh=irreps_create("1x1o + 1x2e + 1x3o");
-    model->layers[2].irreps_sender=irreps_create("32x0e + 8x1o + 8x1e + 8x2e + 8x2o");
-    model->layers[2].irreps_tp=irreps_create("16x0e + 16x0o + 72x1o + 40x1e + 80x2e + 48x2o + 72x3o + 40x3e + 24x4e + 24x4o +8x5o + 8x5e");
-    model->layers[2].irreps_receiver=irreps_create("48x0e + 16x0o + 80x1o + 48x1e + 88x2e + 56x2o + 72x3o + 40x3e + 24x4e + 24x4o + 8x5o + 8x5e");
-    model->layers[2].irreps_node=irreps_create("1x0o + 7x0e");
-    model->layers[2].linear_weight_size=352;
-    model->layers[2].shortcut_weight_size=224;
-    model->layers[2].denominator=1.5;
+    irreps_free(irreps_hidden);
+    irreps_free(irreps_out);
+    irreps_free(irreps_sh);
+    irreps_free(irreps_input);
     return model;
 }
 

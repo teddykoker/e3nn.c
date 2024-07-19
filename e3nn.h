@@ -34,6 +34,9 @@ Irreps* irreps_concatenate(const Irreps*, const Irreps*);
 // force_irreps_out==false, but just copies output otherwise
 Irreps* irreps_linear(const Irreps* irreps_in, const Irreps* irreps_out, const bool force_irreps_out);
 
+// copies Irreps
+Irreps* irreps_copy(const Irreps*);
+
 // free Irreps struct
 void irreps_free(Irreps* irreps);
 
