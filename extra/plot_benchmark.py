@@ -32,10 +32,16 @@ plt.savefig("extra/benchmark_versions.png", dpi=200, bbox_inches="tight", transp
 plt.close(fig)
 
 fig = plt.figure(figsize=(6,3))
-for name in ["e3nn.c v3", "e3nn-jax", "e3nn-torch", "e3nn-torch2"]: # , "e3nn-torch2-ipex"]:
-    label = "e3nn.c" if "e3nn.c" in name else name
-    plt.plot(data[name]["lmax"], data[name]["time"], label=label)
-plt.yscale("log")
+for name in ([
+    "e3nn.c v3",
+    "e3nn.c v4" 
+    #"e3nn-jax", 
+    #"e3nn-torch", 
+    #"e3nn-torch2"
+    ]): # , "e3nn-torch2-ipex"]:
+    label = name
+    plt.plot( data[name]["lmax"], [v4/v3 for v4,v3 in zip (data[name]["time"],data["e3nn.c v3"]["time"])], label=label)
+plt.yscale("log", base=10)
 plt.ylabel("time [ms]")
 plt.xlabel("L")
 plt.legend(fontsize=8)
@@ -43,3 +49,4 @@ plt.grid()
 plt.title("Single-threaded CPU Tensor Product Performance\n" + rf"({channels}x0e + {channels}x1o ...) $\otimes$ (1x0e + 1x1o ...)")
 plt.savefig("extra/benchmark.png", dpi=200, bbox_inches="tight", transparent=False)
 plt.close(fig)
+

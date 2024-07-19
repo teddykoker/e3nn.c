@@ -18,7 +18,7 @@ print(
 int main(void) {
 """)
 
-for version in ["_v1", "_v2", "_v3"]:
+for version in ["_v1", "_v2", "_v3", "_v4"]:
     print(f'printf("e3nn.c{version.replace("_", " ")}\\n");')
     for lmax in range(1, L):
         irreps1 = e3nn.Irreps.spherical_harmonics(lmax)
