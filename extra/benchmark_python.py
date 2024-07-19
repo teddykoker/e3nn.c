@@ -32,8 +32,8 @@ def run_e3nn_jax(lmax):
     irreps1 = e3nn_jax.Irreps.spherical_harmonics(lmax)
     irreps2 = irreps1 * channels
 
-    input1 = e3nn_jax.zeros(irreps1, ())
-    input2 = e3nn_jax.zeros(irreps2, ())
+    input1 = e3nn_jax.normal(irreps1, jax.random.PRNGKey(0), ())
+    input2 = e3nn_jax.normal(irreps2, jax.random.PRNGKey(0), ())
 
     tp = jax.jit(e3nn_jax.tensor_product)
     
@@ -49,8 +49,8 @@ def run_e3nn_torch(lmax):
         irreps2 = (channels * irreps1).sort().irreps.simplify()
 
 
-        input1 = irreps1.randn(-1) * 0
-        input2 = irreps2.randn(-1) * 0
+        input1 = irreps1.randn(-1)
+        input2 = irreps2.randn(-1)
 
         tp = e3nn_torch.o3.FullTensorProduct(irreps1, irreps2)
         tp = e3nn_torch.util.jit.compile(tp)
@@ -68,8 +68,8 @@ def run_e3nn_torch2(lmax):
         irreps1 = e3nn_torch.o3.Irreps.spherical_harmonics(lmax)
         irreps2 = (channels * irreps1).sort().irreps.simplify()
 
-        input1 = irreps1.randn(-1) * 0
-        input2 = irreps2.randn(-1) * 0
+        input1 = irreps1.randn(-1)
+        input2 = irreps2.randn(-1)
         tp = e3nn_torch.o3.experimental.FullTensorProductv2(irreps1, irreps2)
         tp = torch.compile(tp, mode="reduce-overhead", fullgraph=True)
 
@@ -84,8 +84,8 @@ def run_e3nn_torch2_ipex(lmax):
         irreps1 = e3nn_torch.o3.Irreps.spherical_harmonics(lmax)
         irreps2 = (channels * irreps1).sort().irreps.simplify()
 
-        input1 = irreps1.randn(-1) * 0
-        input2 = irreps2.randn(-1) * 0
+        input1 = irreps1.randn(-1)
+        input2 = irreps2.randn(-1)
         tp = e3nn_torch.o3.experimental.FullTensorProductv2(irreps1, irreps2)
         tp.eval()
         tp = ipex.optimize(tp, weights_prepack=False)
