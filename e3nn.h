@@ -65,6 +65,10 @@ void spherical_harmonics(const Irreps* irreps, const float x, const float y, con
 // NOTE: does not support unsimplified irreps
 void linear(const Irreps* irreps_in, const float* input, const float* weight, const Irreps* irreps_out, float* out);
 
+// computes size of weights for linear operation
+int linear_weight_size(const Irreps* irreps_in, const Irreps* irreps_out);
+
+
 // concatenates irreps data together
 // NOTE: assumes inputs irreps are simplified and sorted, and will maintain
 // sorted order for output

@@ -162,6 +162,19 @@ Irreps* irreps_linear(const Irreps* irreps_in, const Irreps* irreps_out, const b
 }
 
 
+int linear_weight_size(const Irreps* irreps_in, const Irreps* irreps_out) {
+    int size = 0;
+    for (int i_in = 0; i_in < irreps_in->size; i_in++) {
+        for (int i_out = 0; i_out < irreps_out->size; i_out++) {
+            if (irrep_compare(&irreps_in->irreps[i_in], &irreps_out->irreps[i_out]) == 0) {
+                size += irreps_in->irreps[i_in].c * irreps_out->irreps[i_out].c;
+            }
+        }
+    }
+    return size;
+}
+
+
 void irreps_free(Irreps* irreps) {
     free(irreps->irreps);
     free(irreps);
