@@ -49,10 +49,10 @@ void neighborlist_free(Neighborlist* nl) {
 
 typedef struct {
     Irreps* irreps_sh;
-    Irreps* irreps_sender;
+    Irreps* irreps_in;
     Irreps* irreps_tp;
-    Irreps* irreps_receiver;
-    Irreps* irreps_node;
+    Irreps* irreps_message;
+    Irreps* irreps_out;
     int linear_weight_size;
     float* linear_weight;
     int shortcut_weight_size;
@@ -65,12 +65,12 @@ Layer layer_create(const Irreps* irreps_in, const Irreps* irreps_sh, const Irrep
     // determine intermediary irreps and weight sizes for layer
     Layer layer;
     layer.irreps_sh=irreps_copy(irreps_sh);
-    layer.irreps_sender=irreps_copy(irreps_in);
-    layer.irreps_tp=irreps_tensor_product(layer.irreps_sender, layer.irreps_sh);
-    layer.irreps_receiver=irreps_concatenate(layer.irreps_sender, layer.irreps_tp);
-    layer.irreps_node=irreps_linear(layer.irreps_receiver, irreps_out, false);
-    layer.linear_weight_size=linear_weight_size(layer.irreps_receiver, layer.irreps_node);
-    layer.shortcut_weight_size=linear_weight_size(layer.irreps_sender, layer.irreps_node);
+    layer.irreps_in=irreps_copy(irreps_in);
+    layer.irreps_tp=irreps_tensor_product(layer.irreps_in, layer.irreps_sh);
+    layer.irreps_message=irreps_concatenate(layer.irreps_in, layer.irreps_tp);
+    layer.irreps_out=irreps_linear(layer.irreps_message, irreps_out, false);
+    layer.linear_weight_size=linear_weight_size(layer.irreps_message, layer.irreps_out);
+    layer.shortcut_weight_size=linear_weight_size(layer.irreps_in, layer.irreps_out);
     layer.denominator=1.5;
     return layer;
 }
@@ -82,10 +82,10 @@ void layer_forward(Layer* layer, const float* node_input, const float pos[][3], 
     // received messages, linear output, and shortcut output
     float* sh           = (float *) malloc(irreps_dim(layer->irreps_sh) * sizeof(float));
     float* tp           = (float *) malloc(irreps_dim(layer->irreps_tp) * sizeof(float));
-    float* messages     = (float *) malloc(nl->size * irreps_dim(layer->irreps_receiver) * sizeof(float));
-    float* receive      = (float *) malloc(irreps_dim(layer->irreps_receiver) * sizeof(float));
-    float* linear_out   = (float *) malloc(irreps_dim(layer->irreps_node) * sizeof(float));
-    float* shortcut_out = (float *) malloc(irreps_dim(layer->irreps_node) * sizeof(float));
+    float* messages     = (float *) malloc(nl->size * irreps_dim(layer->irreps_message) * sizeof(float));
+    float* receive      = (float *) malloc(irreps_dim(layer->irreps_message) * sizeof(float));
+    float* linear_out   = (float *) malloc(irreps_dim(layer->irreps_out) * sizeof(float));
+    float* shortcut_out = (float *) malloc(irreps_dim(layer->irreps_out) * sizeof(float));
 
     // compute messages
     for (int edge = 0; edge < nl->size; edge++) {
@@ -96,27 +96,27 @@ void layer_forward(Layer* layer, const float* node_input, const float pos[][3], 
                             pos[r][1] - pos[s][1], 
                             pos[r][2] - pos[s][2],
                             sh);
-        tensor_product(layer->irreps_sender, 
-                       &node_input[s * irreps_dim(layer->irreps_sender)],
+        tensor_product(layer->irreps_in, 
+                       &node_input[s * irreps_dim(layer->irreps_in)],
                        layer->irreps_sh,
                        sh,
                        layer->irreps_tp,
                        tp);
-        concatenate(layer->irreps_sender, 
-                    &node_input[s * irreps_dim(layer->irreps_sender)],
+        concatenate(layer->irreps_in, 
+                    &node_input[s * irreps_dim(layer->irreps_in)],
                     layer->irreps_tp,
                     tp,
-                    &messages[edge * irreps_dim(layer->irreps_receiver)]);
+                    &messages[edge * irreps_dim(layer->irreps_message)]);
     }
 
     // aggregate messages and update nodes
     for (int node = 0; node < num_node; node++ ) {
         // zero out received messages
-        for (int i = 0; i < irreps_dim(layer->irreps_receiver); i++) {
+        for (int i = 0; i < irreps_dim(layer->irreps_message); i++) {
             receive[i] = 0;
         }
         // zero linear out and shortcut out
-        for (int i = 0; i < irreps_dim(layer->irreps_node); i++) {
+        for (int i = 0; i < irreps_dim(layer->irreps_out); i++) {
             linear_out[i] = 0;
             shortcut_out[i] = 0;
         }
@@ -124,32 +124,32 @@ void layer_forward(Layer* layer, const float* node_input, const float pos[][3], 
         // sum messages into receive
         for (int edge = 0; edge < nl->size; edge++) {
             if (node == nl->receivers[edge]) {
-                for (int i = 0; i < irreps_dim(layer->irreps_receiver); i++) {
-                    receive[i] += messages[edge * irreps_dim(layer->irreps_receiver) + i];
+                for (int i = 0; i < irreps_dim(layer->irreps_message); i++) {
+                    receive[i] += messages[edge * irreps_dim(layer->irreps_message) + i];
                 }
             }
         }
 
         // divide by denominator
-        for (int i = 0; i < irreps_dim(layer->irreps_receiver); i++) {
+        for (int i = 0; i < irreps_dim(layer->irreps_message); i++) {
             receive[i] /= layer->denominator;
         }
 
-        linear(layer->irreps_receiver, 
+        linear(layer->irreps_message, 
                receive, 
                layer->linear_weight, 
-               layer->irreps_node,
+               layer->irreps_out,
                linear_out);
 
-        linear(layer->irreps_sender,
-               &node_input[node * irreps_dim(layer->irreps_sender)],
+        linear(layer->irreps_in,
+               &node_input[node * irreps_dim(layer->irreps_in)],
                layer->shortcut_weight,
-               layer->irreps_node,
+               layer->irreps_out,
                shortcut_out);
 
         // add linear + shortcut
-        for (int i = 0; i < irreps_dim(layer->irreps_node); i++) {
-            node_output[node * irreps_dim(layer->irreps_node) + i] = linear_out[i] + shortcut_out[i];
+        for (int i = 0; i < irreps_dim(layer->irreps_out); i++) {
+            node_output[node * irreps_dim(layer->irreps_out) + i] = linear_out[i] + shortcut_out[i];
         }
     }
     free(sh);
@@ -162,10 +162,10 @@ void layer_forward(Layer* layer, const float* node_input, const float pos[][3], 
 
 void layer_free(Layer* layer) {
     irreps_free(layer->irreps_sh);
-    irreps_free(layer->irreps_sender);
+    irreps_free(layer->irreps_in);
     irreps_free(layer->irreps_tp);
-    irreps_free(layer->irreps_receiver);
-    irreps_free(layer->irreps_node);
+    irreps_free(layer->irreps_message);
+    irreps_free(layer->irreps_out);
 }
 
 
@@ -187,8 +187,8 @@ Model* model_create(void) {
     model->layers = (Layer *) malloc(3 * sizeof(Layer));
 
     model->layers[0] = layer_create(irreps_input, irreps_sh, irreps_hidden);
-    model->layers[1] = layer_create(model->layers[0].irreps_node, irreps_sh, irreps_hidden);
-    model->layers[2] = layer_create(model->layers[1].irreps_node, irreps_sh, irreps_out);
+    model->layers[1] = layer_create(model->layers[0].irreps_out, irreps_sh, irreps_hidden);
+    model->layers[2] = layer_create(model->layers[1].irreps_out, irreps_sh, irreps_out);
 
     irreps_free(irreps_hidden);
     irreps_free(irreps_out);
@@ -228,9 +228,9 @@ void model_free(Model* model) {
 
 float* model_forward(Model* model, const float pos[][3], int num_nodes) {
     Neighborlist* nl = neighborlist_create(pos, num_nodes, 1.1);
-    float* node_features = (float *) malloc(num_nodes * irreps_dim(model->layers[0].irreps_sender) * sizeof(float));
-    float* scatter_sum   = (float *) malloc(irreps_dim(model->layers[2].irreps_node) * sizeof(float));
-    float* logits        = (float *) malloc((irreps_dim(model->layers[2].irreps_node) - 1) * sizeof(float));
+    float* node_features = (float *) malloc(num_nodes * irreps_dim(model->layers[0].irreps_in) * sizeof(float));
+    float* scatter_sum   = (float *) malloc(irreps_dim(model->layers[2].irreps_out) * sizeof(float));
+    float* logits        = (float *) malloc((irreps_dim(model->layers[2].irreps_out) - 1) * sizeof(float));
 
     // inital node features are just 1s
     for (int i = 0; i < num_nodes; i++) {
@@ -239,7 +239,7 @@ float* model_forward(Model* model, const float pos[][3], int num_nodes) {
 
     // compute node features for each layer
     for (int layer = 0; layer < 3; layer++ ) {
-        float* node_features_next = (float *) malloc(num_nodes * irreps_dim(model->layers[layer].irreps_node) * sizeof(float));
+        float* node_features_next = (float *) malloc(num_nodes * irreps_dim(model->layers[layer].irreps_out) * sizeof(float));
 
         layer_forward(&model->layers[layer], node_features, pos, num_nodes, nl, node_features_next);
 
@@ -249,10 +249,10 @@ float* model_forward(Model* model, const float pos[][3], int num_nodes) {
     }
 
     // global sum
-    for (int i = 0; i < irreps_dim(model->layers[2].irreps_node); i++ ) {
+    for (int i = 0; i < irreps_dim(model->layers[2].irreps_out); i++ ) {
         float sum = 0;
         for (int n = 0; n < num_nodes; n++ ) {
-            sum += node_features[n * irreps_dim(model->layers[2].irreps_node) + i];
+            sum += node_features[n * irreps_dim(model->layers[2].irreps_out) + i];
         }
         scatter_sum[i] = sum;
     }
@@ -260,7 +260,7 @@ float* model_forward(Model* model, const float pos[][3], int num_nodes) {
 
     logits[0] = scatter_sum[0] * scatter_sum[1];
     logits[1] = -scatter_sum[0] * scatter_sum[1];
-    for (int i = 2; i < irreps_dim(model->layers[2].irreps_node); i++ ) {
+    for (int i = 2; i < irreps_dim(model->layers[2].irreps_out); i++ ) {
         logits[i] = scatter_sum[i];
     }
 
