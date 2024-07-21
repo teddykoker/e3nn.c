@@ -557,3 +557,43 @@ void concatenate(const Irreps* irreps_1, const float* data_1, const Irreps* irre
         }
     }
 }
+
+
+float sigmoid(float x) {
+    return 1.0 / (1.0 + expf(-x));
+}
+
+
+float sigmoid_normalized(float x) {
+    const float C = 0.5416446;
+    return sigmoid(x) / C;
+}
+
+
+float silu(float x) {
+    return x * sigmoid(x);
+}
+
+
+float silu_normalized(float x) {
+    const float C = 0.5964577;
+    return silu(x) / C;
+}
+
+
+float tanh_normalized(float x) {
+    const float C = 0.62792826;
+    return tanhf(x) / C;
+}
+
+
+void gate(const Irreps* irreps_in,
+          const float* input, 
+          float (*even_act)(float),
+          float (*odd_act)(float),
+          float (*even_gate_act)(float),
+          float (*even_odd_act)(float),
+          float* out) {
+    // TODO
+    return;
+}

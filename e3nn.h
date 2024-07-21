@@ -77,4 +77,28 @@ int linear_weight_size(const Irreps* irreps_in, const Irreps* irreps_out);
 // sorted order for output
 void concatenate(const Irreps* irreps_1, const float* data_1, const Irreps* irreps_2, const float* data_2, float* data_o);
 
+// Sigmoid activation function
+float sigmoid(float);
+
+// Sigmoid normalized so that \int_{-\infty}^{\infty} \f(x)^2 \frac{e^{-x^2/2}}{\sqrt{2\pi}} dx = 1
+float sigmoid_normalized(float);
+
+// SiLU activation function
+float silu(float);
+
+// SiLU normalized so that \int_{-\infty}^{\infty} \f(x)^2 \frac{e^{-x^2/2}}{\sqrt{2\pi}} dx = 1
+float silu_normalized(float);
+
+// tanh normalized so that \int_{-\infty}^{\infty} \f(x)^2 \frac{e^{-x^2/2}}{\sqrt{2\pi}} dx = 1
+float tanh_normalized(float);
+
+// gate activation function
+void gate(const Irreps* irreps_in,
+          const float* input, 
+          float (*even_act)(float),
+          float (*odd_act)(float),
+          float (*even_gate_act)(float),
+          float (*even_odd_act)(float),
+          float* out);
+
 #endif // ifndef INCLUDED_E3NN_H
