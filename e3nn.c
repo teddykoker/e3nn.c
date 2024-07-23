@@ -592,8 +592,69 @@ void gate(const Irreps* irreps_in,
           float (*even_act)(float),
           float (*odd_act)(float),
           float (*even_gate_act)(float),
-          float (*even_odd_act)(float),
+          float (*odd_gate_act)(float),
           float* out) {
-    // TODO
-    return;
+
+    int scalar_count = 0;
+    int scalar_irreps_count = 0;
+    int vector_count = 0;
+
+    for (int i = 0; i < irreps_in->size; i++) {
+        if (irreps_in->irreps[i].l == 0) {
+            scalar_count += irreps_in->irreps[i].c;
+            scalar_irreps_count++;
+        } else {
+            vector_count += irreps_in->irreps[i].c;
+        }
+    }
+
+    Irrep* vector_irreps = &irreps_in->irreps[scalar_irreps_count];
+    Irrep* scalar_irreps = irreps_in->irreps;
+
+    int activated_scalars = scalar_count - vector_count;
+    int out_ptr = 0;         // output write location
+    int scalar_channel = 0;  // current channel of scalar irrep
+    int scalar_irr = 0;      // current scalar irrep index
+    int vector_channel = 0;  // current channel of vector irrep
+    int vector_irr = 0;      // current vector irrep index
+    
+    for (int scalar_ptr = 0; scalar_ptr < scalar_count; scalar_ptr++) {
+    
+        // activated scalars
+        if (scalar_ptr < activated_scalars) {
+            if (scalar_irreps[scalar_irr].p == EVEN) {
+                out[scalar_ptr] = even_act(input[scalar_ptr]);
+            } else {
+                out[scalar_ptr] = odd_act(input[scalar_ptr]);
+            } 
+            out_ptr++;
+
+        // gated scalars
+        } else {
+            float gate;
+            if (scalar_irreps[scalar_irr].p == EVEN) {
+                gate = even_gate_act(input[scalar_ptr]);
+            } else {
+                gate = odd_gate_act(input[scalar_ptr]);
+            } 
+            for (int m = 0; m < vector_irreps[vector_irr].l * 2 + 1; m++) {
+                out[out_ptr] = gate * input[out_ptr + vector_count];
+                out_ptr++;
+
+            }
+            // if vector of channel move to next irrep
+            vector_channel++;
+            if (vector_channel >= vector_irreps[vector_irr].c) {
+                vector_irr++;
+                vector_channel = 0;
+            }
+        }
+
+        // if last scalar of channel move to next irrep
+        scalar_channel++;
+        if (scalar_channel >= scalar_irreps[scalar_irr].c) {
+            scalar_irr++;
+            scalar_channel = 0;
+        }
+    }
 }

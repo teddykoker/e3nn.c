@@ -98,7 +98,7 @@ void gate(const Irreps* irreps_in,
           float (*even_act)(float),
           float (*odd_act)(float),
           float (*even_gate_act)(float),
-          float (*even_odd_act)(float),
+          float (*odd_gate_act)(float),
           float* out);
 
 #endif // ifndef INCLUDED_E3NN_H
