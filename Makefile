@@ -24,10 +24,12 @@ benchmark_c: clebsch_gordan.o e3nn.o benchmark_c.o tp.o
 
 .PHONY: benchmark
 benchmark: benchmark_c
+	mkdir -p extra/build
 	rm benchmark.txt
 	./benchmark_c >> benchmark.txt
 	python extra/benchmark_python.py >> benchmark.txt
 	python extra/plot_benchmark.py
+	rm extra/build/*
 
 # -fPIC makes the code considerably slower, but is needed to call the c code
 # from python; for this reason compiling separately
