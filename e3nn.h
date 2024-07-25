@@ -89,6 +89,19 @@ float silu(float);
 // SiLU normalized so that \int_{-\infty}^{\infty} \f(x)^2 \frac{e^{-x^2/2}}{\sqrt{2\pi}} dx = 1
 float silu_normalized(float);
 
+// e3nn soft odd activation function
+//  x (1 - e^{-x^2})
+float soft_odd(float);
+
+// soft odd normalized so that \int_{-\infty}^{\infty} \f(x)^2 \frac{e^{-x^2/2}}{\sqrt{2\pi}} dx = 1
+float soft_odd_normalized(float);
+
+// GeLU activation function, using approximation GeLU(x) = x/2 (1 + \tanh(\sqrt{\frac{2}{\pi}} (x + 0.044715 x^3 )))
+float gelu(float);
+
+// GeLU normalized so that \int_{-\infty}^{\infty} \f(x)^2 \frac{e^{-x^2/2}}{\sqrt{2\pi}} dx = 1
+float gelu_normalized(float);
+
 // tanh normalized so that \int_{-\infty}^{\infty} \f(x)^2 \frac{e^{-x^2/2}}{\sqrt{2\pi}} dx = 1
 float tanh_normalized(float);
 

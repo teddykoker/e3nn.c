@@ -581,6 +581,29 @@ float silu_normalized(float x) {
 }
 
 
+float soft_odd(float x) {
+    return (1 - expf(-(x * x))) * x;
+}
+
+
+float soft_odd_normalized(float x) {
+    const float C = 0.83935446;
+    return soft_odd(x) / C;
+}
+
+
+float gelu(float x) {
+    const float sqrt2opi = sqrtf(2 / M_PI);
+    return x / 2 * (1 + tanhf(sqrt2opi * (x + 0.044715 * x * x * x)));
+}
+
+
+float gelu_normalized(float x) {
+    const float C = 0.6520582;
+    return gelu(x) / C;
+}
+
+
 float tanh_normalized(float x) {
     const float C = 0.62792826;
     return tanhf(x) / C;
