@@ -171,6 +171,17 @@ Irreps* irreps_linear(const Irreps* irreps_in, const Irreps* irreps_out, const b
 }
 
 
+Irreps* irreps_gate(const Irreps* irreps_in) {
+    Irreps* irreps = (Irreps*) malloc(sizeof(Irreps));
+    irreps->size = 0;
+    irreps->irreps = (Irrep*) malloc(irreps_in->size * sizeof(Irrep));
+
+    // TODO compute gated irreps from irreps_in
+
+    return irreps
+}
+
+
 int linear_weight_size(const Irreps* irreps_in, const Irreps* irreps_out) {
     int size = 0;
     for (int i_in = 0; i_in < irreps_in->size; i_in++) {

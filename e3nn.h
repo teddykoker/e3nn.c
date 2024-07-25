@@ -30,9 +30,12 @@ Irreps* irreps_tensor_product(const Irreps*, const Irreps*);
 // create Irreps struct from concatenation of two Irreps
 Irreps* irreps_concatenate(const Irreps*, const Irreps*);
 
-// creates Irreps of the linear operation, removing unmatching Irreps if
+// creates Irreps of the output of a linear operation, removing unmatching Irreps if
 // force_irreps_out==false, but just copies output otherwise
 Irreps* irreps_linear(const Irreps* irreps_in, const Irreps* irreps_out, const bool force_irreps_out);
+
+// creates Irreps of the output of a gate operation
+Irreps* irreps_gate(const Irreps*);
 
 // copies Irreps
 Irreps* irreps_copy(const Irreps*);
