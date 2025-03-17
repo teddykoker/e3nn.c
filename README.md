@@ -1,5 +1,7 @@
 # e3nn.c
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14183952.svg)](https://doi.org/10.5281/zenodo.14183952)
+
 Pure C implementation of [`e3nn`](https://e3nn.org/). Mostly done for pedagogical reasons, but similar code could be used for C/C++ implementations of e3nn-based models for inference or CUDA kernels for faster operations within Python libraries.
 
 Currently the only operations implemented are the tensor product, and spherical harmonics. 
