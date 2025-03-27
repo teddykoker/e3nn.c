@@ -5,6 +5,7 @@ import e3nn_jax._src
 import e3nn_jax._src.su2
 import jax
 import numpy as np
+from numpy.testing import assert_allclose
 import e3nn_jax
 import pytest
 
@@ -62,6 +63,17 @@ e3nn_c.concatenate.argtypes = (
 )
 e3nn_c.concatenate.restype = None
 
+e3nn_c.gate.argtypes = (
+    ctypes.POINTER(Irreps),
+    np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
+    ctypes._CFuncPtr,
+    ctypes._CFuncPtr,
+    ctypes._CFuncPtr,
+    ctypes._CFuncPtr,
+    np.ctypeslib.ndpointer(dtype=ctypes.c_float, ndim=1),
+)
+e3nn_c.gate.restype = None
+
 clebsch_gordan_c = ctypes.CDLL("./clebsch_gordan.so")
 
 clebsch_gordan_c.compute_clebsch_gordan.argtypes = (
@@ -98,7 +110,7 @@ def test_tensor_product(fn, input1, input2):
         irrepso,
         output_c
     )
-    assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+    assert_allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
 
     e3nn_c.irreps_free(irreps1)
     e3nn_c.irreps_free(irreps2)
@@ -125,7 +137,7 @@ def test_spherical_harmonics(irreps, input):
     output_c = np.zeros_like(output.array)
     irreps = e3nn_c.irreps_create(irreps.encode("utf-8"))
     e3nn_c.spherical_harmonics(irreps, *input, output_c)
-    assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+    assert_allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
 
     e3nn_c.irreps_free(irreps)
 
@@ -150,10 +162,11 @@ def test_linear(irreps_in, irreps_out):
     irreps_in = e3nn_c.irreps_create(irreps_in.encode("utf-8"))
     irreps_out = e3nn_c.irreps_create(irreps_out.encode("utf-8"))
     e3nn_c.linear(irreps_in, np.array(input.array), weight_c, irreps_out, output_c)
-    assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+    assert_allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
 
     e3nn_c.irreps_free(irreps_in)
     e3nn_c.irreps_free(irreps_out)
+
 
 @pytest.mark.parametrize("irreps_1,irreps_2", [
     ("2x0e + 2x1o", "3x0e + 3x1o"),
@@ -170,10 +183,85 @@ def test_concatenate(irreps_1, irreps_2):
     irreps_1 = e3nn_c.irreps_create(irreps_1.encode("utf-8"))
     irreps_2 = e3nn_c.irreps_create(irreps_2.encode("utf-8"))
     e3nn_c.concatenate(irreps_1, np.array(array_1.array), irreps_2, np.array(array_2.array), output_c)
-    assert np.allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+    assert_allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
 
     e3nn_c.irreps_free(irreps_1)
     e3nn_c.irreps_free(irreps_2)
+
+
+def test_gate():
+    irreps = "15x0e + 2x1e + 1x2e"
+    array = e3nn_jax.normal(irreps, jax.random.PRNGKey(0))
+    output = e3nn_jax.gate(
+        array,
+        jax.nn.silu,
+        jax.nn.tanh,
+        jax.nn.silu,
+        jax.nn.silu,
+        normalize_act=True,
+    )
+    output_c = np.zeros_like(output.array)
+    irreps_c = e3nn_c.irreps_create(irreps.encode("utf-8"))
+    e3nn_c.gate(
+        irreps_c,
+        np.array(array.array),
+        e3nn_c.silu_normalized,
+        e3nn_c.tanh_normalized,
+        e3nn_c.silu_normalized,
+        e3nn_c.silu_normalized,
+        output_c,
+    )
+    assert_allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+    e3nn_c.irreps_free(irreps_c)
+
+    irreps = "12x0e + 3x0o + 2x1e + 1x2e"
+    array = e3nn_jax.normal(irreps, jax.random.PRNGKey(0))
+    output = e3nn_jax.gate(
+        array,
+        jax.nn.gelu,
+        e3nn_jax.soft_odd,
+        jax.nn.sigmoid,
+        jax.nn.tanh,
+        normalize_act=True,
+    )
+    output_c = np.zeros_like(output.array)
+    irreps_c = e3nn_c.irreps_create(irreps.encode("utf-8"))
+    e3nn_c.gate(
+        irreps_c,
+        np.array(array.array),
+        e3nn_c.gelu_normalized,
+        e3nn_c.soft_odd_normalized,
+        e3nn_c.sigmoid_normalized,
+        e3nn_c.tanh_normalized,
+        output_c,
+    )
+    assert_allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+    e3nn_c.irreps_free(irreps_c)
+
+    irreps = "12x0e + 3x0o"
+    array = e3nn_jax.normal(irreps, jax.random.PRNGKey(0))
+    output = e3nn_jax.gate(
+        array,
+        jax.nn.gelu,
+        e3nn_jax.soft_odd,
+        jax.nn.sigmoid,
+        jax.nn.tanh,
+        normalize_act=True,
+    )
+    output_c = np.zeros_like(output.array)
+    irreps_c = e3nn_c.irreps_create(irreps.encode("utf-8"))
+    e3nn_c.gate(
+        irreps_c,
+        np.array(array.array),
+        e3nn_c.gelu_normalized,
+        e3nn_c.soft_odd_normalized,
+        e3nn_c.sigmoid_normalized,
+        e3nn_c.tanh_normalized,
+        output_c,
+    )
+    assert_allclose(output_c, output.array, rtol=1e-5, atol=1e-6)
+    e3nn_c.irreps_free(irreps_c)
+
 
 def test_compute_clebsch_gordan():
     l_max = 8
